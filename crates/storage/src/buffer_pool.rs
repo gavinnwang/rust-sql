@@ -1,14 +1,15 @@
+use bytes::Buf;
+
 use crate::disk_manager::DiskManager;
-use crate::typedef::PageId;
-use crate::{typedef::FrameId, Result};
+use crate::frame::PageFrame;
+use crate::typedef::{FrameId, PageId};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
-use crate::page::page::Page;
 use crate::replacer::Replacer;
 
 pub(crate) struct BufferPoolManager {
-    pages: Vec<Page>,
+    frames: Vec<PageFrame>,
     page_table: HashMap<PageId, FrameId>,
     pool_size: usize,
     replacer: Box<dyn Replacer>,
@@ -26,10 +27,10 @@ impl BufferPoolManager {
         F: Fn(usize) -> Box<dyn Replacer>,
     {
         let mut pages = Vec::with_capacity(pool_size);
-        pages.resize_with(pool_size, Page::new);
+        pages.resize_with(pool_size, PageFrame::new);
 
         Self {
-            pages,
+            frames: pages,
             page_table: HashMap::new(),
             pool_size,
             replacer: replacer_factory(pool_size),
@@ -38,37 +39,84 @@ impl BufferPoolManager {
         }
     }
 
-    pub fn create_page(&mut self) -> Result<&Page> {
-        let page_id = {
-            let mut disk = self.disk_manager.write()?;
-            disk.allocate_page()?
+    /// try to find a frame in the buffer pool that is free, or pin count of zero
+    fn get_free_frame(&mut self) -> Option<FrameId> {
+        // use the freelist if it has available frame
+        if let Some(frame_id) = self.free_list.pop_front() {
+            return Some(frame_id);
+        }
+
+        // otherwise evict a frame
+        let frame_id = self.replacer.evict().expect("Failed to evict a frame. Either increase bpm capacity or make sure pages are unpinned.");
+        let frame = &mut self.frames[frame_id];
+        assert!(
+            frame.pin_count() == 0,
+            "If page is evicted from replacer, it's pin count must be 0."
+        );
+
+        // flush the evicted page to disk if it is dirty
+        if frame.is_dirty() {
+            let mut disk = self.disk_manager.write().unwrap();
+            disk.write(frame.page_id(), frame.data()).unwrap();
+        }
+
+        // if a frame is evicted to make space, we should remove the stale record in the page table
+        self.page_table.remove(&frame.page_id());
+
+        frame.reset();
+
+        Some(frame_id)
+    }
+
+    pub(crate) fn create_page(&mut self) -> Option<&PageFrame> {
+        let new_page_id = {
+            let mut disk = self.disk_manager.write().unwrap();
+            disk.allocate_page().unwrap()
         };
+
+        let frame_id = self.get_free_frame()?;
+
+        // add the new record to page table
+        self.page_table.insert(new_page_id, frame_id);
+
+        let page_frame = &mut self.frames[frame_id];
+
+        // pin the new page in frame and record access
+        page_frame.set_pin_count(1);
+        self.replacer.pin(frame_id);
+        self.replacer.record_access(frame_id);
+
+        Some(page_frame)
     }
 
-    pub(crate) fn fetch_page(&self, page_id: PageId) -> Option<&Page> {
-        self.page_table.get(&page_id).map(|&idx| &self.pages[idx])
-    }
-
-    pub(crate) fn fetch_page_mut(&mut self, page_id: PageId) -> Option<&mut Page> {
-        self.page_table
-            .get(&page_id)
-            .map(|&idx| &mut self.pages[idx])
-    }
-
-    pub(crate) fn load_page(&mut self, page_id: PageId, page_data: &[u8]) {
-        if self.page_table.contains_key(&page_id) {
-            return;
+    pub(crate) fn fetch_page_mut(&mut self, page_id: PageId) -> Option<&mut PageFrame> {
+        if let Some(&frame_id) = self.page_table.get(&page_id) {
+            self.replacer.record_access(frame_id);
+            let frame = &mut self.frames[frame_id];
+            frame.increment_pin_count();
+            self.replacer.pin(frame_id);
+            return Some(frame);
         }
 
-        if self.page_table.len() < self.pool_size {
-            let idx = self.page_table.len();
-            self.pages[idx].write(0, page_data);
-            self.page_table.insert(page_id, idx);
-        } else {
-            let evicted_page = self.page_table.keys().next().copied().unwrap();
-            let idx = self.page_table.remove(&evicted_page).unwrap();
-            self.pages[idx].write(0, page_data);
-            self.page_table.insert(page_id, idx);
-        }
+        let frame_id = self.get_free_frame()?;
+
+        self.page_table.insert(page_id, frame_id);
+
+        let page_frame = &mut self.frames[frame_id];
+        page_frame.set_page_id(page_id);
+        page_frame.set_pin_count(1);
+
+        let page_data = {
+            let mut disk = self.disk_manager.write().unwrap();
+            disk.read(page_id).unwrap().unwrap()
+        };
+
+        page_frame.write(0, page_data.as_ref());
+
+        Some(page_frame)
+    }
+
+    pub(crate) fn fetch_page(&mut self, page_id: PageId) -> Option<&PageFrame> {
+        self.fetch_page_mut(page_id).map(|page| &*page)
     }
 }

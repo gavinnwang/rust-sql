@@ -1,4 +1,4 @@
-use crate::page::PageId;
+use crate::typedef::PageId;
 use crate::Result;
 use bytes::{Bytes, BytesMut};
 use rustdb_error::{errdata, Error};
@@ -53,7 +53,7 @@ impl DiskManager {
     }
 
     #[allow(dead_code)]
-    pub fn deallocate_page(&mut self, page_id: &PageId) -> Result<()> {
+    pub fn deallocate_page(&mut self, page_id: PageId) -> Result<()> {
         let mut file = self.file.borrow_mut();
         file.seek(SeekFrom::Start(Self::calculate_offset(page_id)?))?;
         file.write_all(DELETED_FLAG)?;
@@ -68,7 +68,7 @@ impl DiskManager {
         Ok(buf == DELETED_FLAG)
     }
 
-    pub(crate) fn read(&mut self, page_id: &PageId) -> Result<Option<Bytes>> {
+    pub(crate) fn read(&mut self, page_id: PageId) -> Result<Option<Bytes>> {
         let mut file = self.file.borrow_mut();
         file.seek(SeekFrom::Start(Self::calculate_offset(page_id)?))?;
 
@@ -85,7 +85,7 @@ impl DiskManager {
         Ok(Some(bytes))
     }
 
-    pub(crate) fn write(&mut self, page_id: &PageId, data: &[u8]) -> Result<()> {
+    pub(crate) fn write(&mut self, page_id: PageId, data: &[u8]) -> Result<()> {
         if data.len() > PAGE_SIZE_BYTES {
             return errdata!("Page data must fit in a page.");
         }
@@ -98,8 +98,8 @@ impl DiskManager {
         Ok(())
     }
 
-    fn calculate_offset(page_id: &PageId) -> Result<u64> {
-        match (*page_id).checked_mul(PAGE_SIZE_BYTES as u64) {
+    fn calculate_offset(page_id: PageId) -> Result<u64> {
+        match (page_id).checked_mul(PAGE_SIZE_BYTES) {
             Some(value) => Ok(value as u64),
             None => Err(Error::ArithmeticOverflow),
         }

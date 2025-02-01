@@ -1,5 +1,6 @@
 mod buffer_pool;
 mod disk_manager;
+mod frame;
 mod page;
 mod replacer;
 mod typedef;
