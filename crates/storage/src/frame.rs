@@ -58,8 +58,8 @@ impl PageFrame {
     }
 
     pub(crate) fn decrement_pin_count(&mut self) {
+        assert!(self.pin_cnt != 0);
         self.pin_cnt -= 1;
-        assert!(self.pin_cnt >= 0);
     }
 
     pub(crate) fn reset(&mut self) {
