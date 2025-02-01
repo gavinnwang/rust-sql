@@ -5,7 +5,6 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
 use crate::Result;
-use rustdb_error::Error;
 
 use crate::replacer::replacer::Replacer;
 
@@ -84,8 +83,8 @@ impl BufferPoolManager {
 
         // pin the new page in frame and record access
         page_frame.set_pin_count(1);
-        self.replacer.pin(frame_id);
         self.replacer.record_access(frame_id);
+        self.replacer.pin(frame_id);
 
         Some(page_frame)
     }
@@ -134,6 +133,7 @@ impl BufferPoolManager {
         self.fetch_page_mut(page_id).map(|page| &*page)
     }
 
+    /// deletes page from both the bpm and disk
     pub(crate) fn delete_page(&mut self, page_id: PageId) -> Result<()> {
         // If the page is not in the buffer pool, return true (nothing to delete)
         if !self.page_table.contains_key(&page_id) {
@@ -149,11 +149,18 @@ impl BufferPoolManager {
             panic!("Cannot delete page when page is pinned");
         }
 
+        self.replacer.unpin(frame_id);
+        self.replacer.remove(frame_id);
+
         // Remove page from page_table
         self.page_table.remove(&page_id);
 
         // Add the frame to the free list
         self.free_list.push_back(frame_id);
+
+        // deallocate the page on disk
+        let mut disk = self.disk_manager.write().unwrap();
+        disk.deallocate_page(page_id).unwrap();
 
         // Reset the page's metadata and memory
         page_frame.reset();

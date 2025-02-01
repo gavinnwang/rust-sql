@@ -8,6 +8,7 @@ pub trait Replacer {
     fn pin(&mut self, frame_id: FrameId);
 
     /// Record the event that the given frame id is accessed at current timestamp.
+    /// Create a new entry if frame id has not been seen before.
     fn record_access(&mut self, frame_id: FrameId);
 
     /// Attempts to evict a page based on the replacement policy.
@@ -16,4 +17,7 @@ pub trait Replacer {
 
     /// Returns the number of evictable pages in the replacer.
     fn size(&self) -> usize;
+
+    /// Removes a page from the replacer. This should only be called on a page that is evictable
+    fn remove(&mut self, frame_id: FrameId);
 }
