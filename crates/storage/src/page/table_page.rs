@@ -70,6 +70,18 @@ impl<'a> TablePage<'a> {
         };
     }
 
+    pub(crate) fn next_page_id(&self) -> PageId {
+        return self.header().next_page_id;
+    }
+
+    pub(crate) fn tuple_count(&self) -> u16 {
+        return self.header().tuple_cnt;
+    }
+
+    pub(crate) fn deleted_tuple_count(&self) -> u16 {
+        return self.header().deleted_tuple_cnt;
+    }
+
     /// Immutable access to the header
     pub(crate) fn header(&self) -> &TablePageHeader {
         bytemuck::from_bytes(&self.page_frame.data()[..Self::PAGE_HEADER_SIZE])
@@ -169,6 +181,10 @@ mod tests {
 
         let frame1 = bpm.fetch_page_mut(1).unwrap();
 
-        let mut table_page1 = TablePage::from(frame1);
+        let table_page1 = TablePage::from(frame1);
+
+        assert_eq!(1, table_page1.page_id());
+        assert_eq!(2, table_page1.next_page_id());
+        assert_eq!(5, table_page1.tuple_count());
     }
 }
