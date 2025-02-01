@@ -190,9 +190,9 @@ mod tests {
 
         assert_eq!(1, table_page.page_id());
 
-        let frame1 = bpm.fetch_page_mut(1).unwrap();
+        let frame1 = bpm.fetch_page(1).unwrap();
 
-        let table_page1 = TablePageMut::from(frame1);
+        let table_page1 = TablePageRef::from(frame1);
 
         assert_eq!(1, table_page1.page_id());
         assert_eq!(2, table_page1.next_page_id());
