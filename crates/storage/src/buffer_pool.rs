@@ -1,10 +1,10 @@
-use crate::disk_manager::DiskManager;
+use crate::disk::disk_manager::DiskManager;
 use crate::frame::PageFrame;
 use crate::typedef::{FrameId, PageId};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
-use crate::replacer::Replacer;
+use crate::replacer::replacer::Replacer;
 
 pub(crate) struct BufferPoolManager {
     frames: Vec<PageFrame>,

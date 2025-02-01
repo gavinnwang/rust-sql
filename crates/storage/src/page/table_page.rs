@@ -101,7 +101,10 @@ impl<'a> From<&'a mut PageFrame> for TablePage<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer_pool::BufferPoolManager;
+    use crate::{
+        buffer_pool::BufferPoolManager,
+        disk_manager::{DiskManager, DATA_DIR},
+    };
 
     use super::*;
 
@@ -146,6 +149,7 @@ mod tests {
 
     #[test]
     fn test_table_page_with_buffer_pool() {
-        let bpm = BufferPoolManager::new(10);
+        let disk = DiskManager::new(DATA_DIR);
+        let bpm = BufferPoolManager::new(10, disk);
     }
 }
