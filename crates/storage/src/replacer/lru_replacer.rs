@@ -14,8 +14,6 @@ struct LruNode {
     timestamp: u64,
 }
 
-type LruNodeRef = Rc<RefCell<LruNode>>;
-
 pub(crate) struct LruReplacer {
     node_store: HashMap<FrameId, LruNode>,
     capacity: usize,
