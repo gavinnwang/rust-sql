@@ -44,20 +44,57 @@ impl TupleMetadata {
     }
 }
 
-pub(crate) struct TablePage<'a> {
-    page_frame: &'a mut PageFrame,
+/// Generic struct for both mutable and immutable table pages.
+pub(crate) struct TablePage<T> {
+    page_frame: T,
 }
 
-impl<'a> TablePage<'a> {
+impl<T: AsRef<PageFrame>> TablePage<T> {
     const PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
     const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
 
-    pub(crate) fn new(page: &'a mut PageFrame) -> Self {
-        TablePage { page_frame: page }
+    pub(crate) fn page_id(&self) -> PageId {
+        self.page_frame.as_ref().page_id()
     }
 
-    pub(crate) fn page_id(&self) -> PageId {
-        return self.page_frame.page_id();
+    pub(crate) fn next_page_id(&self) -> PageId {
+        self.header().next_page_id
+    }
+
+    pub(crate) fn tuple_count(&self) -> u16 {
+        self.header().tuple_cnt
+    }
+
+    pub(crate) fn deleted_tuple_count(&self) -> u16 {
+        self.header().deleted_tuple_cnt
+    }
+
+    /// Immutable access to the header
+    pub(crate) fn header(&self) -> &TablePageHeader {
+        bytemuck::from_bytes(&self.page_frame.as_ref().data()[..Self::PAGE_HEADER_SIZE])
+    }
+
+    /// Returns the slot array (immutable)
+    pub(crate) fn slot_array(&self) -> &[TupleInfo] {
+        let tuple_cnt = self.header().tuple_cnt as usize;
+        let slots_end = Self::PAGE_HEADER_SIZE + (tuple_cnt * Self::TUPLE_INFO_SIZE);
+        bytemuck::cast_slice(&self.page_frame.as_ref().data()[Self::PAGE_HEADER_SIZE..slots_end])
+    }
+}
+
+impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
+    /// Mutable access to the header
+    pub(crate) fn header_mut(&mut self) -> &mut TablePageHeader {
+        bytemuck::from_bytes_mut(&mut self.page_frame.as_mut().data_mut()[..Self::PAGE_HEADER_SIZE])
+    }
+
+    /// Returns the slot array (mutable)
+    pub(crate) fn slot_array_mut(&mut self) -> &mut [TupleInfo] {
+        let tuple_cnt = self.header().tuple_cnt as usize;
+        let slots_end = Self::PAGE_HEADER_SIZE + (tuple_cnt * Self::TUPLE_INFO_SIZE);
+        bytemuck::cast_slice_mut(
+            &mut self.page_frame.as_mut().data_mut()[Self::PAGE_HEADER_SIZE..slots_end],
+        )
     }
 
     pub(crate) fn init_header(&mut self, next_page_id: PageId) {
@@ -69,47 +106,21 @@ impl<'a> TablePage<'a> {
             _padding: [0; 4],
         };
     }
+}
 
-    pub(crate) fn next_page_id(&self) -> PageId {
-        return self.header().next_page_id;
-    }
+/// Type alias for immutable TablePage
+pub(crate) type TablePageRef<'a> = TablePage<&'a PageFrame>;
 
-    pub(crate) fn tuple_count(&self) -> u16 {
-        return self.header().tuple_cnt;
-    }
+/// Type alias for mutable TablePage
+pub(crate) type TablePageMut<'a> = TablePage<&'a mut PageFrame>;
 
-    pub(crate) fn deleted_tuple_count(&self) -> u16 {
-        return self.header().deleted_tuple_cnt;
-    }
-
-    /// Immutable access to the header
-    pub(crate) fn header(&self) -> &TablePageHeader {
-        bytemuck::from_bytes(&self.page_frame.data()[..Self::PAGE_HEADER_SIZE])
-    }
-
-    /// Mutable access to the header
-    pub(crate) fn header_mut(&mut self) -> &mut TablePageHeader {
-        bytemuck::from_bytes_mut(&mut self.page_frame.data_mut()[..Self::PAGE_HEADER_SIZE])
-    }
-
-    /// Returns the slot array (immutable)
-    pub(crate) fn slot_array(&self) -> &[TupleInfo] {
-        let tuple_cnt = self.header().tuple_cnt as usize;
-        let slots_end = Self::PAGE_HEADER_SIZE + (tuple_cnt * Self::TUPLE_INFO_SIZE);
-
-        bytemuck::cast_slice(&self.page_frame.data()[Self::PAGE_HEADER_SIZE..slots_end])
-    }
-
-    /// Returns the slot array (mutable)
-    pub(crate) fn slot_array_mut(&mut self) -> &mut [TupleInfo] {
-        let tuple_cnt = self.header().tuple_cnt as usize;
-        let slots_end = Self::PAGE_HEADER_SIZE + (tuple_cnt * Self::TUPLE_INFO_SIZE);
-
-        bytemuck::cast_slice_mut(&mut self.page_frame.data_mut()[Self::PAGE_HEADER_SIZE..slots_end])
+impl<'a> From<&'a PageFrame> for TablePageRef<'a> {
+    fn from(page_frame: &'a PageFrame) -> Self {
+        TablePage { page_frame }
     }
 }
 
-impl<'a> From<&'a mut PageFrame> for TablePage<'a> {
+impl<'a> From<&'a mut PageFrame> for TablePageMut<'a> {
     fn from(page_frame: &'a mut PageFrame) -> Self {
         TablePage { page_frame }
     }
@@ -130,7 +141,7 @@ mod tests {
     fn test_table_page() {
         let frame = &mut PageFrame::new();
 
-        let mut table_page = TablePage::from(frame);
+        let mut table_page = TablePageMut::from(frame);
 
         table_page.init_header(2);
 
@@ -172,7 +183,7 @@ mod tests {
 
         let frame = bpm.create_page().unwrap();
 
-        let mut table_page = TablePage::from(frame);
+        let mut table_page = TablePageMut::from(frame);
 
         table_page.init_header(2);
         table_page.header_mut().tuple_cnt = 5;
@@ -181,7 +192,7 @@ mod tests {
 
         let frame1 = bpm.fetch_page_mut(1).unwrap();
 
-        let table_page1 = TablePage::from(frame1);
+        let table_page1 = TablePageMut::from(frame1);
 
         assert_eq!(1, table_page1.page_id());
         assert_eq!(2, table_page1.next_page_id());
