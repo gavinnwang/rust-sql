@@ -1,23 +1,18 @@
 use crate::typedef::FrameId;
-use std::{
-    cell::RefCell,
-    collections::{HashMap, LinkedList},
-    rc::Rc,
-    u64,
-};
+use std::collections::HashMap;
 
 use super::replacer::Replacer;
 
 struct LruNode {
     frame_id: FrameId,
     is_evictable: bool,
-    timestamp: u64,
+    last_accessed_timestamp: u64,
 }
 
 pub(crate) struct LruReplacer {
     node_store: HashMap<FrameId, LruNode>,
     evictable_size: usize, // Tracks evictable nodes
-    last_accessed_timestamp: u64,
+    timestamp: u64,
 }
 
 impl LruReplacer {
@@ -25,13 +20,13 @@ impl LruReplacer {
         LruReplacer {
             node_store: HashMap::new(),
             evictable_size: 0,
-            last_accessed_timestamp: 0,
+            timestamp: 0,
         }
     }
 
     fn get_timestamp(&mut self) -> u64 {
-        let old_timestamp = self.last_accessed_timestamp;
-        self.last_accessed_timestamp += 1;
+        let old_timestamp = self.timestamp;
+        self.timestamp += 1;
         return old_timestamp;
     }
 }
@@ -43,7 +38,7 @@ impl Replacer for LruReplacer {
             .node_store
             .values()
             .filter(|node| node.is_evictable) // Only consider evictable frames
-            .min_by_key(|node| node.timestamp) // Find the smallest timestamp
+            .min_by_key(|node| node.last_accessed_timestamp) // Find the smallest timestamp
             .map(|node| node.frame_id);
 
         if let Some(frame_id) = lru_frame {
@@ -81,13 +76,13 @@ impl Replacer for LruReplacer {
         let new_timestamp = self.get_timestamp();
         match self.node_store.get_mut(&frame_id) {
             Some(node) => {
-                node.timestamp = new_timestamp;
+                node.last_accessed_timestamp = new_timestamp;
             }
             None => {
                 let node = LruNode {
                     frame_id,
                     is_evictable: true,
-                    timestamp: self.get_timestamp(),
+                    last_accessed_timestamp: self.get_timestamp(),
                 };
 
                 self.node_store.insert(frame_id, node);
@@ -159,6 +154,7 @@ mod tests {
         assert_eq!(lru.evict(), Some(1)); // 1 is now LRU
         assert_eq!(lru.evict(), Some(3)); // 3 is now LRU
         assert_eq!(lru.evict(), None); // No evictable frames left
+        assert
     }
 
     #[test]
