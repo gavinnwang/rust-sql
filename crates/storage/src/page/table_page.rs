@@ -5,18 +5,18 @@ use std::mem;
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
 pub(crate) struct TablePageHeader {
-    pub(crate) next_page_id: PageId,
-    pub(crate) tuple_cnt: u16,
-    pub(crate) deleted_tuple_cnt: u16,
+    next_page_id: PageId,
+    tuple_cnt: u16,
+    deleted_tuple_cnt: u16,
     _padding: [u8; 4],
 }
 
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
 pub(crate) struct TupleInfo {
-    pub(crate) offset: u16,
-    pub(crate) size_bytes: u16,
-    pub(crate) metadata: TupleMetadata,
+    offset: u16,
+    size_bytes: u16,
+    metadata: TupleMetadata,
 }
 
 #[repr(C)]
@@ -27,19 +27,19 @@ pub(crate) struct TupleMetadata {
 }
 
 impl TupleMetadata {
-    pub fn is_deleted(&self) -> bool {
+    pub(crate) fn is_deleted(&self) -> bool {
         self.is_deleted != 0
     }
 
-    pub fn set_deleted(&mut self, deleted: bool) {
+    pub(crate) fn set_deleted(&mut self, deleted: bool) {
         self.is_deleted = deleted as u8;
     }
 
-    pub fn is_null(&self) -> bool {
+    pub(crate) fn is_null(&self) -> bool {
         self.is_null != 0
     }
 
-    pub fn set_null(&mut self, is_null: bool) {
+    pub(crate) fn set_null(&mut self, is_null: bool) {
         self.is_null = is_null as u8;
     }
 }
