@@ -18,14 +18,11 @@ pub(crate) struct BufferPoolManager {
 }
 
 impl BufferPoolManager {
-    pub(crate) fn new<F>(
+    pub(crate) fn new(
         pool_size: usize,
         disk_manager: Arc<RwLock<DiskManager>>,
-        replacer_factory: F,
-    ) -> Self
-    where
-        F: Fn(usize) -> Box<dyn Replacer>,
-    {
+        replacer: Box<dyn Replacer>,
+    ) -> Self {
         let mut pages = Vec::with_capacity(pool_size);
         pages.resize_with(pool_size, PageFrame::new);
 
@@ -33,7 +30,7 @@ impl BufferPoolManager {
             frames: pages,
             page_table: HashMap::new(),
             pool_size,
-            replacer: replacer_factory(pool_size),
+            replacer,
             free_list: (0..pool_size).collect(),
             disk_manager,
         }
@@ -68,7 +65,7 @@ impl BufferPoolManager {
         Some(frame_id)
     }
 
-    pub(crate) fn create_page(&mut self) -> Option<&PageFrame> {
+    pub(crate) fn create_page(&mut self) -> Option<&mut PageFrame> {
         let new_page_id = {
             let mut disk = self.disk_manager.write().unwrap();
             disk.allocate_page().unwrap()
@@ -81,6 +78,8 @@ impl BufferPoolManager {
 
         let page_frame = &mut self.frames[frame_id];
 
+        page_frame.set_page_id(new_page_id);
+        page_frame.set_dirty(false);
         // pin the new page in frame and record access
         page_frame.set_pin_count(1);
         self.replacer.record_access(frame_id);
@@ -104,6 +103,7 @@ impl BufferPoolManager {
 
         let page_frame = &mut self.frames[frame_id];
         page_frame.set_page_id(page_id);
+        page_frame.set_dirty(false);
         page_frame.set_pin_count(1);
 
         let page_data = {

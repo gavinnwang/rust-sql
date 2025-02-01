@@ -16,23 +16,17 @@ struct LruNode {
 
 pub(crate) struct LruReplacer {
     node_store: HashMap<FrameId, LruNode>,
-    capacity: usize,
     evictable_size: usize, // Tracks evictable nodes
     last_accessed_timestamp: u64,
 }
 
 impl LruReplacer {
-    pub(crate) fn new(capacity: usize) -> Self {
+    pub(crate) fn new() -> Self {
         LruReplacer {
             node_store: HashMap::new(),
-            capacity,
             evictable_size: 0,
             last_accessed_timestamp: 0,
         }
-    }
-
-    pub(crate) fn factory() -> impl Fn(usize) -> Box<dyn Replacer> {
-        |capacity| Box::new(Self::new(capacity))
     }
 
     fn get_timestamp(&mut self) -> u64 {
@@ -117,5 +111,106 @@ impl Replacer for LruReplacer {
     /// Returns the number of evictable frames.
     fn size(&self) -> usize {
         self.evictable_size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_record_access() {
+        let mut lru = LruReplacer::new();
+
+        lru.record_access(1);
+        lru.record_access(2);
+        lru.record_access(3);
+
+        assert_eq!(lru.size(), 3);
+    }
+
+    #[test]
+    fn test_evict() {
+        let mut lru = LruReplacer::new();
+
+        lru.record_access(1);
+        lru.record_access(2);
+        lru.record_access(3);
+
+        assert_eq!(lru.size(), 3);
+
+        assert_eq!(lru.evict(), Some(1)); // LRU frame (1) should be evicted
+        assert_eq!(lru.evict(), Some(2)); // Next LRU frame (2) should be evicted
+        assert_eq!(lru.evict(), Some(3)); // Last frame (3) should be evicted
+        assert_eq!(lru.evict(), None); // No more evictable frames
+    }
+
+    #[test]
+    fn test_pin() {
+        let mut lru = LruReplacer::new();
+
+        lru.record_access(1);
+        lru.record_access(2);
+        lru.record_access(3);
+
+        lru.pin(2);
+
+        assert_eq!(lru.size(), 2); // Only 1 & 3 should be evictable
+        assert_eq!(lru.evict(), Some(1)); // 1 is now LRU
+        assert_eq!(lru.evict(), Some(3)); // 3 is now LRU
+        assert_eq!(lru.evict(), None); // No evictable frames left
+    }
+
+    #[test]
+    fn test_unpin() {
+        let mut lru = LruReplacer::new();
+
+        lru.record_access(1);
+        lru.record_access(2);
+        lru.record_access(3);
+
+        lru.pin(2);
+        assert_eq!(lru.size(), 2); // 2 is pinned, only 1 & 3 are evictable
+
+        lru.unpin(2);
+        assert_eq!(lru.size(), 3); // 2 is now evictable again
+
+        assert_eq!(lru.evict(), Some(1));
+        assert_eq!(lru.evict(), Some(2)); // 2 should be evictable again
+    }
+
+    #[test]
+    fn test_remove() {
+        let mut lru = LruReplacer::new();
+
+        lru.record_access(1);
+        lru.record_access(2);
+        lru.record_access(3);
+
+        lru.remove(2); // Remove frame 2 directly
+
+        assert_eq!(lru.size(), 2); // Only 1 & 3 should remain
+        assert_eq!(lru.evict(), Some(1));
+        assert_eq!(lru.evict(), Some(3));
+        assert_eq!(lru.evict(), None); // All evictable frames are gone
+    }
+
+    #[test]
+    fn test_record_access_multiple_times() {
+        let mut lru = LruReplacer::new();
+
+        lru.record_access(1);
+        lru.record_access(2);
+        lru.record_access(3);
+
+        assert_eq!(lru.size(), 3);
+
+        lru.record_access(1);
+
+        assert_eq!(lru.evict(), Some(2));
+        assert_eq!(lru.evict(), Some(3));
+        assert_eq!(lru.evict(), Some(1));
+
+        assert_eq!(lru.size(), 0);
     }
 }

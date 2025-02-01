@@ -56,6 +56,10 @@ impl<'a> TablePage<'a> {
         TablePage { page_frame: page }
     }
 
+    pub(crate) fn page_id(&self) -> PageId {
+        return self.page_frame.page_id();
+    }
+
     pub(crate) fn init_header(&mut self, next_page_id: PageId) {
         let header = self.header_mut();
         *header = TablePageHeader {
@@ -101,9 +105,11 @@ impl<'a> From<&'a mut PageFrame> for TablePage<'a> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, RwLock};
+
     use crate::{
-        buffer_pool::BufferPoolManager,
-        disk_manager::{DiskManager, DATA_DIR},
+        buffer_pool::BufferPoolManager, disk::disk_manager::DiskManager,
+        replacer::lru_replacer::LruReplacer,
     };
 
     use super::*;
@@ -112,7 +118,6 @@ mod tests {
     fn test_table_page() {
         let frame = &mut PageFrame::new();
 
-        // let mut table_page = TablePage::new(&mut frame);
         let mut table_page = TablePage::from(frame);
 
         table_page.init_header(2);
@@ -149,7 +154,21 @@ mod tests {
 
     #[test]
     fn test_table_page_with_buffer_pool() {
-        let disk = DiskManager::new(DATA_DIR);
-        let bpm = BufferPoolManager::new(10, disk);
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
+        let replacer = Box::new(LruReplacer::new());
+        let mut bpm = BufferPoolManager::new(10, disk, replacer);
+
+        let frame = bpm.create_page().unwrap();
+
+        let mut table_page = TablePage::from(frame);
+
+        table_page.init_header(2);
+        table_page.header_mut().tuple_cnt = 5;
+
+        assert_eq!(1, table_page.page_id());
+
+        let frame1 = bpm.fetch_page_mut(1).unwrap();
+
+        let mut table_page1 = TablePage::from(frame1);
     }
 }
