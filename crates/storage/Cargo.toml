@@ -1,0 +1,9 @@
+[package]
+name = "storage"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bytemuck = { version = "*", features = ["derive"]}
+rustdb-error = { path = "../error" }
+bytes = "1.9.0"

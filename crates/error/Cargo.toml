@@ -1,0 +1,8 @@
+[package]
+name = "rustdb-error"
+version = "0.1.0"
+edition = "2021"
+description = "The Result module for recoverable errors in the Rustdb pedagogical database management system."
+
+[dependencies]
+serde = "1.0.204"
