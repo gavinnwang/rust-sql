@@ -4,6 +4,9 @@ use crate::typedef::{FrameId, PageId};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 
+use crate::Result;
+use rustdb_error::Error;
+
 use crate::replacer::replacer::Replacer;
 
 pub(crate) struct BufferPoolManager {
@@ -129,5 +132,32 @@ impl BufferPoolManager {
 
     pub(crate) fn fetch_page(&mut self, page_id: PageId) -> Option<&PageFrame> {
         self.fetch_page_mut(page_id).map(|page| &*page)
+    }
+
+    pub(crate) fn delete_page(&mut self, page_id: PageId) -> Result<()> {
+        // If the page is not in the buffer pool, return true (nothing to delete)
+        if !self.page_table.contains_key(&page_id) {
+            return Ok(());
+        }
+
+        let frame_id = self.page_table[&page_id];
+        let page_frame = &mut self.frames[frame_id];
+
+        // If the page is pinned, deletion is not possible
+        if page_frame.pin_count() > 0 {
+            // should probably return error here
+            panic!("Cannot delete page when page is pinned");
+        }
+
+        // Remove page from page_table
+        self.page_table.remove(&page_id);
+
+        // Add the frame to the free list
+        self.free_list.push_back(frame_id);
+
+        // Reset the page's metadata and memory
+        page_frame.reset();
+
+        Ok(())
     }
 }
