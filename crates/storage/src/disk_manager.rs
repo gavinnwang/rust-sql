@@ -39,7 +39,7 @@ impl DiskManager {
         };
 
         // Initialize the first page, potentially clearing out any garbage data.
-        disk_manager.write(&0, EMPTY_BUFFER)?;
+        disk_manager.write(0, EMPTY_BUFFER)?;
 
         Ok(disk_manager)
     }
@@ -48,7 +48,7 @@ impl DiskManager {
         self.last_allocated_pid += 1;
         let page_id = self.last_allocated_pid;
 
-        self.write(&page_id, EMPTY_BUFFER)?;
+        self.write(page_id, EMPTY_BUFFER)?;
         Ok(page_id)
     }
 

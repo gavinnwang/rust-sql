@@ -110,7 +110,7 @@ mod tests {
         let frame = &mut PageFrame::new();
 
         // let mut table_page = TablePage::new(&mut frame);
-        let mut table_page = TablePage::from(&mut frame);
+        let mut table_page = TablePage::from(frame);
 
         table_page.init_header(2);
 

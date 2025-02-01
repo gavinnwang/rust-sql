@@ -1,5 +1,3 @@
-use bytes::Buf;
-
 use crate::disk_manager::DiskManager;
 use crate::frame::PageFrame;
 use crate::typedef::{FrameId, PageId};
@@ -91,9 +89,9 @@ impl BufferPoolManager {
 
     pub(crate) fn fetch_page_mut(&mut self, page_id: PageId) -> Option<&mut PageFrame> {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
-            self.replacer.record_access(frame_id);
             let frame = &mut self.frames[frame_id];
             frame.increment_pin_count();
+            self.replacer.record_access(frame_id);
             self.replacer.pin(frame_id);
             return Some(frame);
         }
@@ -114,6 +112,19 @@ impl BufferPoolManager {
         page_frame.write(0, page_data.as_ref());
 
         Some(page_frame)
+    }
+
+    pub(crate) fn unpin_page(&mut self, page_id: PageId, is_dirty: bool) {
+        if let Some(&frame_id) = self.page_table.get(&page_id) {
+            let page_frame = &mut self.frames[frame_id];
+            if is_dirty {
+                page_frame.set_dirty(true);
+            }
+            page_frame.decrement_pin_count();
+            if page_frame.pin_count() == 0 {
+                self.replacer.unpin(frame_id);
+            }
+        }
     }
 
     pub(crate) fn fetch_page(&mut self, page_id: PageId) -> Option<&PageFrame> {
