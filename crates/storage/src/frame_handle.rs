@@ -1,60 +1,41 @@
 use crate::{buffer_pool::BufferPoolManager, frame::PageFrame, typedef::PageId};
-use std::sync::{Arc, RwLock};
 
 /// Immutable page handle for read access.
-pub(crate) struct PageFrameRefHandle {
-    bpm: *mut BufferPoolManager,  // Store as raw pointer
-    page_frame: *const PageFrame, // Store PageFrame as raw pointer
+pub(crate) struct PageFrameRefHandle<'a> {
+    bpm: &'a mut BufferPoolManager,
+    page_frame: &'a PageFrame,
 }
 
-impl PageFrameRefHandle {
+impl<'a> PageFrameRefHandle<'a> {
     /// Creates a new immutable handle to a page.
-    pub(crate) fn new(bpm: &mut BufferPoolManager, page_frame: &PageFrame) -> Self {
-        PageFrameRefHandle {
-            bpm: bpm as *mut BufferPoolManager,
-            page_frame: page_frame as *const PageFrame,
-        }
-    }
-
-    pub(crate) fn page(&self) -> &PageFrame {
-        unsafe { &*self.page_frame }
+    pub(crate) fn new(bpm: &'a mut BufferPoolManager, page_frame: &'a PageFrame) -> Self {
+        PageFrameRefHandle { bpm, page_frame }
     }
 }
 
-impl Drop for PageFrameRefHandle {
+impl<'a> Drop for PageFrameRefHandle<'a> {
     /// Calls `unpin_page()` when dropped, assuming `is_dirty = false`.
     fn drop(&mut self) {
-        unsafe {
-            (*self.bpm).unpin_page((*self.page_frame).page_id(), false);
-        }
+        self.bpm.unpin_page(self.page_frame.page_id(), false);
     }
 }
 
 /// Mutable page handle for safe write access.
-pub(crate) struct PageFrameMutHandle {
-    bpm: *mut BufferPoolManager, // Store as raw pointer
-    page_frame: *mut PageFrame,  // Store PageFrame as raw pointer
+pub(crate) struct PageFrameMutHandle<'a> {
+    bpm: &'a mut BufferPoolManager,
+    page_frame: &'a mut PageFrame,
 }
 
-impl PageFrameMutHandle {
+impl<'a> PageFrameMutHandle<'a> {
     /// Creates a new mutable handle to a page.
-    pub(crate) fn new(bpm: &mut BufferPoolManager, page_frame: &mut PageFrame) -> Self {
-        PageFrameMutHandle {
-            bpm: bpm as *mut BufferPoolManager,
-            page_frame: page_frame as *mut PageFrame,
-        }
-    }
-
-    pub(crate) fn page_mut(&self) -> &mut PageFrame {
-        unsafe { &mut *self.page_frame }
+    pub(crate) fn new(bpm: &'a mut BufferPoolManager, page_frame: &'a mut PageFrame) -> Self {
+        PageFrameMutHandle { bpm, page_frame }
     }
 }
 
-impl Drop for PageFrameMutHandle {
+impl<'a> Drop for PageFrameMutHandle<'a> {
     /// Calls `unpin_page()` when dropped, assuming `is_dirty = true`.
     fn drop(&mut self) {
-        unsafe {
-            (*self.bpm).unpin_page((*self.page_frame).page_id(), true);
-        }
+        self.bpm.unpin_page(self.page_frame.page_id(), true);
     }
 }
