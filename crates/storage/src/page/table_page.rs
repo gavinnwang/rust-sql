@@ -223,7 +223,7 @@ mod tests {
 
     use crate::{
         buffer_pool::BufferPoolManager, disk::disk_manager::DiskManager, page::INVALID_PAGE_ID,
-        replacer::lru_replacer::LruReplacer,
+        record_id::INVALID_RECORD_ID, replacer::lru_replacer::LruReplacer,
     };
 
     use super::*;
@@ -286,5 +286,59 @@ mod tests {
         assert_eq!(slots[0].offset, 55);
         assert_eq!(slots[1].offset, 11);
         assert_eq!(slots[1].metadata.is_null(), true);
+    }
+
+    #[test]
+    fn test_insert_and_get_tuple() {
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
+        let replacer = Box::new(LruReplacer::new());
+        let mut bpm = BufferPoolManager::new(10, disk, replacer);
+
+        let mut page_id = INVALID_PAGE_ID;
+        let mut insert_record_id = INVALID_RECORD_ID;
+
+        // tuple metadata
+        let metadata = TupleMetadata {
+            is_deleted: 0,
+            is_null: 0,
+        };
+
+        let tuple_data = vec![1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8];
+        {
+            let frame_handle = bpm.create_page_handle().unwrap();
+            let mut table_page = TablePageMut::from(frame_handle);
+
+            page_id = table_page.page_id();
+
+            // Initialize page header
+            table_page.init_header(2);
+            assert_eq!(table_page.header().tuple_cnt, 0);
+
+            let tuple = Tuple::new(tuple_data.clone());
+
+            // Insert the tuple
+            let record_id = table_page.insert_tuple(&metadata, &tuple).unwrap();
+            assert_eq!(table_page.tuple_count(), 1);
+
+            insert_record_id = record_id.clone();
+
+            // Retrieve the tuple
+            let (retrieved_meta, retrieved_tuple) = table_page.get_tuple(&record_id).unwrap();
+
+            // Ensure retrieved tuple matches inserted tuple
+            assert_eq!(retrieved_meta.is_deleted(), metadata.is_deleted());
+            assert_eq!(retrieved_meta.is_null(), metadata.is_null());
+            assert_eq!(retrieved_tuple.data(), &tuple_data);
+        }
+        let frame_handle_1 = bpm.fetch_page_handle(page_id).unwrap();
+
+        let table_page1 = TablePageRef::from(frame_handle_1);
+        // Retrieve the tuple
+        let (retrieved_meta, retrieved_tuple) = table_page1.get_tuple(&insert_record_id).unwrap();
+
+        // Ensure retrieved tuple matches inserted tuple
+        assert_eq!(retrieved_meta.is_deleted(), metadata.is_deleted());
+        assert_eq!(retrieved_meta.is_null(), metadata.is_null());
+        assert_eq!(retrieved_tuple.data(), &tuple_data);
     }
 }

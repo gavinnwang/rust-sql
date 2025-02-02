@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use rustdb_error::{errdata, Error};
+use rustdb_error::Error;
 
 use crate::{
     buffer_pool::BufferPoolManager,
