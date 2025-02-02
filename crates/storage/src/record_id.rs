@@ -1,8 +1,4 @@
-use std::mem::size_of;
-
-use crate::typedef::PageId;
-
-use super::INVALID_PAGE_ID;
+use crate::{page::INVALID_PAGE_ID, typedef::PageId};
 
 #[derive(Clone, Debug, Hash)]
 pub struct RecordId {
