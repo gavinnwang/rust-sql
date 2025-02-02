@@ -189,4 +189,54 @@ impl BufferPoolManager {
 
         Ok(())
     }
+
+    fn capacity(&self) -> usize {
+        self.frames.len()
+    }
+
+    fn free_frame_count(&self) -> usize {
+        self.free_list.len() + self.replacer.size()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::buffer_pool::BufferPoolManager;
+    use crate::disk::disk_manager::DiskManager;
+    use crate::replacer::lru_replacer::LruReplacer;
+    use std::{
+        sync::{Arc, RwLock},
+        thread,
+    };
+
+    #[test]
+    fn test_create_pages_beyond_capacity() {
+        let pool_size = 5; // Small pool size to test eviction
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
+        let replacer = Box::new(LruReplacer::new());
+        let bpm = Arc::new(RwLock::new(BufferPoolManager::new(
+            pool_size, disk, replacer,
+        )));
+
+        assert_eq!(pool_size, bpm.read().unwrap().free_frame_count());
+
+        // let mut handles = vec![];
+        //
+        // for _ in 0..5 {
+        //     let bpm_clone = Arc::clone(&bpm);
+        //     let handle = thread::spawn(move || {
+        //         let mut bpm_handle = bpm_clone.write().unwrap();
+        //         let page_handle = bpm_handle.create_page_handle();
+        //         assert!(page_handle.is_some(), "Failed to allocate within capacity");
+        //     });
+        //     handles.push(handle);
+        // }
+        //
+        // // Join all threads
+        // for handle in handles {
+        //     handle.join().expect("Thread panicked");
+        // }
+
+        assert_eq!(5, bpm.read().unwrap().free_frame_count());
+    }
 }
