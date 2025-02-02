@@ -12,7 +12,7 @@ struct LruNode {
 pub(crate) struct LruReplacer {
     node_store: HashMap<FrameId, LruNode>,
     evictable_size: usize, // Tracks evictable nodes
-    timestamp: u64,
+    current_timestamp: u64,
 }
 
 impl LruReplacer {
@@ -20,13 +20,13 @@ impl LruReplacer {
         LruReplacer {
             node_store: HashMap::new(),
             evictable_size: 0,
-            timestamp: 0,
+            current_timestamp: 0,
         }
     }
 
-    fn get_timestamp(&mut self) -> u64 {
-        let old_timestamp = self.timestamp;
-        self.timestamp += 1;
+    fn current_timestamp(&mut self) -> u64 {
+        let old_timestamp = self.current_timestamp;
+        self.current_timestamp += 1;
         return old_timestamp;
     }
 }
@@ -73,7 +73,7 @@ impl Replacer for LruReplacer {
     /// Records an access and updates the timestamp.
     /// If the frame_id is new, create a new node.
     fn record_access(&mut self, frame_id: FrameId) {
-        let new_timestamp = self.get_timestamp();
+        let new_timestamp = self.current_timestamp();
         match self.node_store.get_mut(&frame_id) {
             Some(node) => {
                 node.last_accessed_timestamp = new_timestamp;
@@ -82,7 +82,7 @@ impl Replacer for LruReplacer {
                 let node = LruNode {
                     frame_id,
                     is_evictable: true,
-                    last_accessed_timestamp: self.get_timestamp(),
+                    last_accessed_timestamp: self.current_timestamp(),
                 };
 
                 self.node_store.insert(frame_id, node);
