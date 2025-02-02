@@ -280,5 +280,11 @@ mod tests {
         assert_eq!(1, table_page1.page_id());
         assert_eq!(2, table_page1.next_page_id());
         assert_eq!(3, table_page1.tuple_count());
+
+        let slots = table_page1.slot_array();
+        assert_eq!(slots.len(), 3);
+        assert_eq!(slots[0].offset, 55);
+        assert_eq!(slots[1].offset, 11);
+        assert_eq!(slots[1].metadata.is_null(), true);
     }
 }
