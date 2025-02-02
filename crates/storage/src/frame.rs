@@ -1,7 +1,6 @@
-use crate::typedef::PageId;
+use crate::{page::INVALID_PAGE_ID, typedef::PageId};
 
 const PAGE_SIZE: usize = 4096;
-const INVALID_PAGE_ID: PageId = PageId::MAX;
 
 pub(crate) struct PageFrame {
     page_id: PageId,

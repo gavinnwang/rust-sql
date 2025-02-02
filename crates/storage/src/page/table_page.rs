@@ -80,6 +80,13 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         let slots_end = PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
         bytemuck::cast_slice(&self.page_frame.as_ref().data()[PAGE_HEADER_SIZE..slots_end])
     }
+
+    pub(crate) fn get_tuple(&self, rid: &RecordId) -> Result<Tuple> {
+        // if rid.page_id() != self.page_id || rid.slot_id() >= self.total_tuple_count() {
+        //     return Result::from(Error::InvalidInput(rid.to_string()));
+        // }
+        todo!()
+    }
 }
 
 impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
