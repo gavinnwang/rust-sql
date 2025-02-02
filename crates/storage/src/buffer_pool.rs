@@ -65,9 +65,10 @@ impl BufferPoolManager {
     }
 
     pub(crate) fn create_page_handle(&mut self) -> Option<PageFrameMutHandle> {
+        // UNSAFE code to bypass borrow checker
         let self_ptr = self as *mut Self;
-        let frame = unsafe { (*self_ptr).create_page()? };
-        Some(PageFrameMutHandle::new(unsafe { &mut *self_ptr }, frame))
+        let frame = self.create_page()?;
+        Some(PageFrameMutHandle::new(self_ptr, frame))
     }
 
     fn create_page(&mut self) -> Option<&mut PageFrame> {

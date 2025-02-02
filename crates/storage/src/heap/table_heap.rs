@@ -14,8 +14,10 @@ impl TableHeap {
         let bpm = Arc::clone(bpm);
         let first_page_id = {
             let mut bpm_handle = bpm.write().unwrap();
-            let root_page = bpm_handle.create_page().unwrap();
-            root_page.page_id()
+            let mut root_page_handle = bpm_handle
+                .create_page_handle()
+                .expect("Failed to create root page for table heap");
+            root_page_handle.page_frame_mut().page_id()
         };
 
         TableHeap {
