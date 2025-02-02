@@ -85,7 +85,7 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         bytemuck::cast_slice(&self.page_frame.as_ref().data()[PAGE_HEADER_SIZE..slots_end])
     }
 
-    pub(crate) fn get_tuple(&self, rid: &RecordId) -> Result<(TupleInfo, Tuple)> {
+    pub(crate) fn get_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
         if rid.page_id() != self.page_id() || rid.slot_id() >= self.tuple_count() {
             return Result::from(Error::InvalidInput(rid.to_string()));
         }
@@ -93,10 +93,10 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         let slot_array = self.slot_array();
         let tuple_info = slot_array[rid.slot_id() as usize];
 
-        // If the tuple is deleted, return an error
-        if tuple_info.metadata.is_deleted() {
-            return Result::from(Error::InvalidInput(rid.to_string()));
-        }
+        // // If the tuple is deleted, return an error
+        // if tuple_info.metadata.is_deleted() {
+        //     return Result::from(Error::InvalidInput(rid.to_string()));
+        // }
 
         let data_offset = tuple_info.offset as usize;
         let data_size = tuple_info.size_bytes as usize;
@@ -109,7 +109,11 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         let tuple_data = page_data[data_offset..data_offset + data_size].to_vec();
         let tuple = Tuple::new(tuple_data);
 
-        Ok((tuple_info, tuple))
+        Ok((tuple_info.metadata, tuple))
+    }
+
+    pub(crate) fn insert_tuple(&self, meta: TupleMetadata, tuple: Tuple) {
+        todo!()
     }
 }
 
