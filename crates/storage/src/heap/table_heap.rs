@@ -9,4 +9,16 @@ pub struct TableHeap {
     last_page_id: PageId,
 }
 
-impl TableHeap {}
+impl TableHeap {
+    pub fn new(bpm: &Arc<RwLock<BufferPoolManager>>) -> TableHeap {
+        let bpm = Arc::clone(bpm);
+        let first_page_id = bpm.write().unwrap().create_page().unwrap().page_id();
+
+        TableHeap {
+            page_cnt: 1,
+            buffer_pool_manager: bpm,
+            first_page_id,
+            last_page_id: first_page_id,
+        }
+    }
+}

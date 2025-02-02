@@ -1,5 +1,6 @@
 use crate::disk::disk_manager::DiskManager;
 use crate::frame::PageFrame;
+use crate::frame_handle::PageFrameMutHandle;
 use crate::typedef::{FrameId, PageId};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
@@ -61,6 +62,13 @@ impl BufferPoolManager {
         frame.reset();
 
         Some(frame_id)
+    }
+
+    pub(crate) fn create_page_handle(&mut self) -> Option<PageFrameMutHandle> {
+        let page_frame = self.create_page().unwrap();
+        let page_id = page_frame.page_id();
+
+        Some(PageFrameMutHandle::new(self, page_id))
     }
 
     pub(crate) fn create_page(&mut self) -> Option<&mut PageFrame> {

@@ -271,12 +271,13 @@ mod tests {
         let frame = bpm.create_page().unwrap();
         let mut table_page = TablePageMut::from(frame);
 
+        let page_id = table_page.page_id();
+
         table_page.init_header(2);
         table_page.header_mut().tuple_cnt = 5;
 
-        // bpm.unpin_page_frame(frame, true);
-
         assert_eq!(1, table_page.page_id());
+        bpm.unpin_page(page_id, true);
 
         let frame1 = bpm.fetch_page(1).unwrap();
 
