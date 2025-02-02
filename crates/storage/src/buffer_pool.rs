@@ -64,11 +64,10 @@ impl BufferPoolManager {
         Some(frame_id)
     }
 
-    pub(crate) fn create_page_handle(&mut self) -> Option<PageFrameMutHandle> {
-        let page_frame = self.create_page().unwrap();
-        let page_id = page_frame.page_id();
-
-        Some(PageFrameMutHandle::new(self, page_id))
+    fn create_page_handle(&mut self) -> Option<PageFrameMutHandle> {
+        let self_ptr = self as *mut Self;
+        let frame = unsafe { (*self_ptr).create_page()? };
+        Some(PageFrameMutHandle::new(unsafe { &mut *self_ptr }, frame))
     }
 
     pub(crate) fn create_page(&mut self) -> Option<&mut PageFrame> {
