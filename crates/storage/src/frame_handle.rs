@@ -2,8 +2,8 @@ use crate::{buffer_pool::BufferPoolManager, frame::PageFrame, typedef::PageId};
 
 /// Immutable page handle for read access.
 pub(crate) struct PageFrameRefHandle {
-    bpm: *mut BufferPoolManager,  // Store as raw pointer
-    page_frame: *const PageFrame, // Store PageFrame as raw pointer
+    bpm: *mut BufferPoolManager,
+    page_frame: *const PageFrame,
 }
 
 impl PageFrameRefHandle {
@@ -31,8 +31,8 @@ impl Drop for PageFrameRefHandle {
 
 /// Mutable page handle for safe write access.
 pub(crate) struct PageFrameMutHandle {
-    bpm: *mut BufferPoolManager, // Store as raw pointer
-    page_frame: *mut PageFrame,  // Store PageFrame as raw pointer
+    bpm: *mut BufferPoolManager,
+    page_frame: *mut PageFrame,
 }
 
 impl PageFrameMutHandle {
