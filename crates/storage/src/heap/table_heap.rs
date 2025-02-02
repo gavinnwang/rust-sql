@@ -12,7 +12,11 @@ pub struct TableHeap {
 impl TableHeap {
     pub fn new(bpm: &Arc<RwLock<BufferPoolManager>>) -> TableHeap {
         let bpm = Arc::clone(bpm);
-        let first_page_id = bpm.write().unwrap().create_page().unwrap().page_id();
+        let first_page_id = {
+            let mut bpm_handle = bpm.write().unwrap();
+            let root_page = bpm_handle.create_page().unwrap();
+            root_page.page_id()
+        };
 
         TableHeap {
             page_cnt: 1,

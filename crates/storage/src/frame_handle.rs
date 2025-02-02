@@ -3,19 +3,20 @@ use crate::{buffer_pool::BufferPoolManager, frame::PageFrame, typedef::PageId};
 /// Immutable page handle for read access.
 pub(crate) struct PageFrameRefHandle<'a> {
     bpm: &'a mut BufferPoolManager,
-    page_id: PageId,
+    page_frame: &'a PageFrame,
 }
 
 impl<'a> PageFrameRefHandle<'a> {
-    pub(crate) fn new(bpm: &'a mut BufferPoolManager, page_id: PageId) -> Self {
-        PageFrameRefHandle { bpm, page_id }
+    /// Creates a new immutable handle to a page.
+    pub(crate) fn new(bpm: &'a mut BufferPoolManager, page_frame: &'a PageFrame) -> Self {
+        PageFrameRefHandle { bpm, page_frame }
     }
 }
 
 impl<'a> Drop for PageFrameRefHandle<'a> {
     /// Calls `unpin_page()` when dropped, assuming `is_dirty = false`.
     fn drop(&mut self) {
-        self.bpm.unpin_page(self.page_id, false);
+        self.bpm.unpin_page(self.page_frame.page_id(), false);
     }
 }
 
@@ -26,6 +27,7 @@ pub(crate) struct PageFrameMutHandle<'a> {
 }
 
 impl<'a> PageFrameMutHandle<'a> {
+    /// Creates a new mutable handle to a page.
     pub(crate) fn new(bpm: &'a mut BufferPoolManager, page_id: PageId) -> Self {
         PageFrameMutHandle { bpm, page_id }
     }
