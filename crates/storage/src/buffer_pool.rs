@@ -11,7 +11,6 @@ use crate::replacer::replacer::Replacer;
 pub(crate) struct BufferPoolManager {
     frames: Vec<PageFrame>,
     page_table: HashMap<PageId, FrameId>,
-    pool_size: usize,
     replacer: Box<dyn Replacer>,
     free_list: VecDeque<FrameId>,
     disk_manager: Arc<RwLock<DiskManager>>,
@@ -29,7 +28,6 @@ impl BufferPoolManager {
         Self {
             frames: pages,
             page_table: HashMap::new(),
-            pool_size,
             replacer,
             free_list: (0..pool_size).collect(),
             disk_manager,
