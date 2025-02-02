@@ -1,5 +1,4 @@
 use crate::{buffer_pool::BufferPoolManager, frame::PageFrame, typedef::PageId};
-use std::sync::{Arc, RwLock};
 
 /// Immutable page handle for read access.
 pub(crate) struct PageFrameRefHandle {
@@ -9,7 +8,7 @@ pub(crate) struct PageFrameRefHandle {
 
 impl PageFrameRefHandle {
     /// Creates a new immutable handle to a page.
-    pub(crate) fn new(bpm: &mut BufferPoolManager, page_frame: &PageFrame) -> Self {
+    pub(crate) fn new(bpm: *mut BufferPoolManager, page_frame: *const PageFrame) -> Self {
         PageFrameRefHandle {
             bpm: bpm as *mut BufferPoolManager,
             page_frame: page_frame as *const PageFrame,
@@ -38,7 +37,7 @@ pub(crate) struct PageFrameMutHandle {
 
 impl PageFrameMutHandle {
     /// Creates a new mutable handle to a page.
-    pub(crate) fn new(bpm: &mut BufferPoolManager, page_frame: &mut PageFrame) -> Self {
+    pub(crate) fn new(bpm: *mut BufferPoolManager, page_frame: *mut PageFrame) -> Self {
         PageFrameMutHandle {
             bpm: bpm as *mut BufferPoolManager,
             page_frame: page_frame as *mut PageFrame,

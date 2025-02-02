@@ -67,7 +67,7 @@ impl BufferPoolManager {
     fn create_page_handle(&mut self) -> Option<PageFrameMutHandle> {
         let self_ptr = self as *mut Self;
         let frame = unsafe { (*self_ptr).create_page()? };
-        Some(PageFrameMutHandle::new(unsafe { &mut *self_ptr }, frame))
+        Some(PageFrameMutHandle::new(self_ptr, frame))
     }
 
     pub(crate) fn create_page(&mut self) -> Option<&mut PageFrame> {
