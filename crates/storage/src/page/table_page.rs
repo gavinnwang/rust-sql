@@ -26,6 +26,9 @@ pub(crate) struct TupleMetadata {
     is_null: u8,
 }
 
+const PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
+const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
+
 impl TupleMetadata {
     pub(crate) fn is_deleted(&self) -> bool {
         self.is_deleted != 0
@@ -50,9 +53,6 @@ pub(crate) struct TablePage<T> {
 }
 
 impl<T: AsRef<PageFrame>> TablePage<T> {
-    const PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
-    const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
-
     pub(crate) fn page_id(&self) -> PageId {
         self.page_frame.as_ref().page_id()
     }
@@ -71,29 +71,29 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
 
     /// Immutable access to the header
     pub(crate) fn header(&self) -> &TablePageHeader {
-        bytemuck::from_bytes(&self.page_frame.as_ref().data()[..Self::PAGE_HEADER_SIZE])
+        bytemuck::from_bytes(&self.page_frame.as_ref().data()[..PAGE_HEADER_SIZE])
     }
 
     /// Returns the slot array (immutable)
     pub(crate) fn slot_array(&self) -> &[TupleInfo] {
         let tuple_cnt = self.header().tuple_cnt as usize;
-        let slots_end = Self::PAGE_HEADER_SIZE + (tuple_cnt * Self::TUPLE_INFO_SIZE);
-        bytemuck::cast_slice(&self.page_frame.as_ref().data()[Self::PAGE_HEADER_SIZE..slots_end])
+        let slots_end = PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
+        bytemuck::cast_slice(&self.page_frame.as_ref().data()[PAGE_HEADER_SIZE..slots_end])
     }
 }
 
 impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
     /// Mutable access to the header
     pub(crate) fn header_mut(&mut self) -> &mut TablePageHeader {
-        bytemuck::from_bytes_mut(&mut self.page_frame.as_mut().data_mut()[..Self::PAGE_HEADER_SIZE])
+        bytemuck::from_bytes_mut(&mut self.page_frame.as_mut().data_mut()[..PAGE_HEADER_SIZE])
     }
 
     /// Returns the slot array (mutable)
     pub(crate) fn slot_array_mut(&mut self) -> &mut [TupleInfo] {
         let tuple_cnt = self.header().tuple_cnt as usize;
-        let slots_end = Self::PAGE_HEADER_SIZE + (tuple_cnt * Self::TUPLE_INFO_SIZE);
+        let slots_end = PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
         bytemuck::cast_slice_mut(
-            &mut self.page_frame.as_mut().data_mut()[Self::PAGE_HEADER_SIZE..slots_end],
+            &mut self.page_frame.as_mut().data_mut()[PAGE_HEADER_SIZE..slots_end],
         )
     }
 
