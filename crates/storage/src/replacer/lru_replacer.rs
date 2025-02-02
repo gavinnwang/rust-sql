@@ -154,7 +154,6 @@ mod tests {
         assert_eq!(lru.evict(), Some(1)); // 1 is now LRU
         assert_eq!(lru.evict(), Some(3)); // 3 is now LRU
         assert_eq!(lru.evict(), None); // No evictable frames left
-        assert
     }
 
     #[test]

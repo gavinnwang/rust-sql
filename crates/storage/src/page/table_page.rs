@@ -182,11 +182,12 @@ mod tests {
         let mut bpm = BufferPoolManager::new(10, disk, replacer);
 
         let frame = bpm.create_page().unwrap();
-
         let mut table_page = TablePageMut::from(frame);
 
         table_page.init_header(2);
         table_page.header_mut().tuple_cnt = 5;
+
+        // bpm.unpin_page_frame(frame, true);
 
         assert_eq!(1, table_page.page_id());
 

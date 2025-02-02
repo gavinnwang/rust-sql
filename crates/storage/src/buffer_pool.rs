@@ -116,6 +116,17 @@ impl BufferPoolManager {
         Some(page_frame)
     }
 
+    pub(crate) fn unpin_page_frame(&mut self, page_frame: &mut PageFrame, is_dirty: bool) {
+        if is_dirty {
+            page_frame.set_dirty(true);
+        }
+        page_frame.decrement_pin_count();
+        if page_frame.pin_count() == 0 {
+            let frame_id = *self.page_table.get(&page_frame.page_id()).unwrap();
+            self.replacer.unpin(frame_id);
+        }
+    }
+
     pub(crate) fn unpin_page(&mut self, page_id: PageId, is_dirty: bool) {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
             let page_frame = &mut self.frames[frame_id];
