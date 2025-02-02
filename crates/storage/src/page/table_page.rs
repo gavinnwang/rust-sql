@@ -1,3 +1,5 @@
+use crate::record_id::RecordId;
+use crate::tuple::Tuple;
 use crate::Result;
 use crate::{frame::PageFrame, typedef::PageId};
 use bytemuck::{Pod, Zeroable};
@@ -91,7 +93,23 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         let slot_array = self.slot_array();
         let tuple_info = slot_array[rid.slot_id() as usize];
 
-        todo!()
+        // If the tuple is deleted, return an error
+        if tuple_info.metadata.is_deleted() {
+            return Result::from(Error::InvalidInput(rid.to_string()));
+        }
+
+        let data_offset = tuple_info.offset as usize;
+        let data_size = tuple_info.size_bytes as usize;
+        let page_data = self.page_frame.as_ref().data();
+
+        if data_offset + data_size > page_data.len() {
+            return Result::from(Err(Error::OutOfBounds));
+        }
+
+        let tuple_data = page_data[data_offset..data_offset + data_size].to_vec();
+        let tuple = Tuple::new(tuple_data);
+
+        Ok((tuple_info, tuple))
     }
 }
 
