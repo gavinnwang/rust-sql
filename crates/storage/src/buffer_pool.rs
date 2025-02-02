@@ -1,6 +1,6 @@
 use crate::disk::disk_manager::DiskManager;
 use crate::frame::PageFrame;
-use crate::frame_handle::PageFrameMutHandle;
+use crate::frame_handle::{PageFrameMutHandle, PageFrameRefHandle};
 use crate::typedef::{FrameId, PageId};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
@@ -94,7 +94,7 @@ impl BufferPoolManager {
         Some(page_frame)
     }
 
-    pub(crate) fn fetch_page_mut(&mut self, page_id: PageId) -> Option<&mut PageFrame> {
+    fn fetch_page_mut(&mut self, page_id: PageId) -> Option<&mut PageFrame> {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
             let frame = &mut self.frames[frame_id];
             frame.increment_pin_count();
@@ -122,6 +122,26 @@ impl BufferPoolManager {
         Some(page_frame)
     }
 
+    fn fetch_page(&mut self, page_id: PageId) -> Option<&PageFrame> {
+        self.fetch_page_mut(page_id).map(|page| &*page)
+    }
+
+    pub(crate) fn fetch_page_handle(&mut self, page_id: PageId) -> Option<PageFrameRefHandle> {
+        // UNSAFE code to bypass borrow checker
+        let self_ptr = self as *mut Self;
+        let page_frame = self.fetch_page(page_id)?;
+
+        Some(PageFrameRefHandle::new(self_ptr, page_frame))
+    }
+
+    pub(crate) fn fetch_page_mut_handle(&mut self, page_id: PageId) -> Option<PageFrameMutHandle> {
+        // UNSAFE code to bypass borrow checker
+        let self_ptr = self as *mut Self;
+        let page_frame = self.fetch_page_mut(page_id)?;
+
+        Some(PageFrameMutHandle::new(self_ptr, page_frame))
+    }
+
     pub(crate) fn unpin_page(&mut self, page_id: PageId, is_dirty: bool) {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
             let page_frame = &mut self.frames[frame_id];
@@ -135,12 +155,8 @@ impl BufferPoolManager {
         }
     }
 
-    pub(crate) fn fetch_page(&mut self, page_id: PageId) -> Option<&PageFrame> {
-        self.fetch_page_mut(page_id).map(|page| &*page)
-    }
-
     /// deletes page from both the bpm and disk
-    pub(crate) fn delete_page(&mut self, page_id: PageId) -> Result<()> {
+    fn delete_page(&mut self, page_id: PageId) -> Result<()> {
         // If the page is not in the buffer pool, return true (nothing to delete)
         if !self.page_table.contains_key(&page_id) {
             return Ok(());

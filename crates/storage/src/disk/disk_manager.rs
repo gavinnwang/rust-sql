@@ -52,7 +52,6 @@ impl DiskManager {
         Ok(page_id)
     }
 
-    #[allow(dead_code)]
     pub fn deallocate_page(&mut self, page_id: PageId) -> Result<()> {
         let mut file = self.file.borrow_mut();
         file.seek(SeekFrom::Start(Self::calculate_offset(page_id)?))?;

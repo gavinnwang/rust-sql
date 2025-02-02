@@ -222,7 +222,7 @@ mod tests {
     use std::sync::{Arc, RwLock};
 
     use crate::{
-        buffer_pool::BufferPoolManager, disk::disk_manager::DiskManager,
+        buffer_pool::BufferPoolManager, disk::disk_manager::DiskManager, page::INVALID_PAGE_ID,
         replacer::lru_replacer::LruReplacer,
     };
 
@@ -234,46 +234,51 @@ mod tests {
         let replacer = Box::new(LruReplacer::new());
         let mut bpm = BufferPoolManager::new(10, disk, replacer);
 
-        let frame_handle = bpm.create_page_handle().unwrap();
-        let mut table_page = TablePageMut::from(frame_handle);
+        let mut page_id = INVALID_PAGE_ID;
+        {
+            let frame_handle = bpm.create_page_handle().unwrap();
+            let mut table_page = TablePageMut::from(frame_handle);
 
-        table_page.init_header(2);
+            table_page.init_header(2);
 
-        let header = table_page.header();
-        assert_eq!(header.next_page_id, 2);
-        assert_eq!(header.tuple_cnt, 0);
-        assert_eq!(header.deleted_tuple_cnt, 0);
+            page_id = table_page.page_id();
 
-        table_page.header_mut().tuple_cnt = 5;
+            let header = table_page.header();
+            assert_eq!(header.next_page_id, 2);
+            assert_eq!(header.tuple_cnt, 0);
+            assert_eq!(header.deleted_tuple_cnt, 0);
 
-        let updated_header = table_page.header();
-        assert_eq!(updated_header.tuple_cnt, 5);
+            table_page.header_mut().tuple_cnt = 5;
 
-        let slots = table_page.slot_array();
-        assert_eq!(slots.len(), 5);
+            let updated_header = table_page.header();
+            assert_eq!(updated_header.tuple_cnt, 5);
 
-        let slots_mut = table_page.slot_array_mut();
-        slots_mut[0].offset = 55;
-        slots_mut[1].offset = 11;
-        slots_mut[1].metadata.set_null(true);
-        assert_eq!(slots_mut[0].offset, 55);
-        assert_eq!(slots_mut[1].offset, 11);
-        assert_eq!(slots_mut[1].metadata.is_null(), true);
+            let slots = table_page.slot_array();
+            assert_eq!(slots.len(), 5);
 
-        table_page.header_mut().tuple_cnt = 3;
+            let slots_mut = table_page.slot_array_mut();
+            slots_mut[0].offset = 55;
+            slots_mut[1].offset = 11;
+            slots_mut[1].metadata.set_null(true);
+            assert_eq!(slots_mut[0].offset, 55);
+            assert_eq!(slots_mut[1].offset, 11);
+            assert_eq!(slots_mut[1].metadata.is_null(), true);
 
-        let slots = table_page.slot_array();
-        assert_eq!(slots.len(), 3);
-        assert_eq!(slots[0].offset, 55);
-        assert_eq!(slots[1].offset, 11);
-        assert_eq!(slots[1].metadata.is_null(), true);
+            table_page.header_mut().tuple_cnt = 3;
 
-        // let frame1 = bpm.fetch_page(1).unwrap();
-        //
-        // let table_page1 = TablePageRef::from(frame1);
-        //
-        // assert_eq!(1, table_page1.page_id());
-        // assert_eq!(2, table_page1.next_page_id());
-        // assert_eq!(5, table_page1.tuple_count());
+            let slots = table_page.slot_array();
+            assert_eq!(slots.len(), 3);
+            assert_eq!(slots[0].offset, 55);
+            assert_eq!(slots[1].offset, 11);
+            assert_eq!(slots[1].metadata.is_null(), true);
+        }
+
+        let frame_handle_1 = bpm.fetch_page_handle(page_id).unwrap();
+
+        let table_page1 = TablePageRef::from(frame_handle_1);
+
+        assert_eq!(1, table_page1.page_id());
+        assert_eq!(2, table_page1.next_page_id());
+        assert_eq!(3, table_page1.tuple_count());
     }
 }
