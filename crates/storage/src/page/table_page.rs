@@ -1,3 +1,4 @@
+use crate::page::PAGE_SIZE;
 use crate::record_id::RecordId;
 use crate::tuple::Tuple;
 use crate::Result;
@@ -30,7 +31,7 @@ pub(crate) struct TupleMetadata {
     is_null: u8,
 }
 
-const PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
+const TABLE_PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
 const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
 
 impl TupleMetadata {
@@ -75,14 +76,14 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
 
     /// Immutable access to the header
     pub(crate) fn header(&self) -> &TablePageHeader {
-        bytemuck::from_bytes(&self.page_frame.as_ref().data()[..PAGE_HEADER_SIZE])
+        bytemuck::from_bytes(&self.page_frame.as_ref().data()[..TABLE_PAGE_HEADER_SIZE])
     }
 
     /// Returns the slot array (immutable)
     pub(crate) fn slot_array(&self) -> &[TupleInfo] {
         let tuple_cnt = self.header().tuple_cnt as usize;
-        let slots_end = PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
-        bytemuck::cast_slice(&self.page_frame.as_ref().data()[PAGE_HEADER_SIZE..slots_end])
+        let slots_end = TABLE_PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
+        bytemuck::cast_slice(&self.page_frame.as_ref().data()[TABLE_PAGE_HEADER_SIZE..slots_end])
     }
 
     pub(crate) fn get_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
@@ -112,23 +113,40 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         Ok((tuple_info.metadata, tuple))
     }
 
-    pub(crate) fn insert_tuple(&self, meta: TupleMetadata, tuple: Tuple) {
-        todo!()
+    fn get_next_tuple_offset(&mut self, tuple: &Tuple) -> Result<u16> {
+        let slot_end_offset = match self.tuple_count() {
+            0 => PAGE_SIZE,
+            _ => {
+                let slot_array = self.slot_array();
+                let last_tuple_info = slot_array.last().unwrap();
+                last_tuple_info.offset as usize
+            }
+        };
+
+        let tuple_offset = slot_end_offset - tuple.tuple_size();
+
+        if TABLE_PAGE_HEADER_SIZE + TUPLE_INFO_SIZE * (self.tuple_count() + 1) as usize
+            > tuple_offset
+        {
+            return Result::from(Err(Error::OutOfBounds));
+        }
+
+        Ok(tuple_offset as u16)
     }
 }
 
 impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
     /// Mutable access to the header
     pub(crate) fn header_mut(&mut self) -> &mut TablePageHeader {
-        bytemuck::from_bytes_mut(&mut self.page_frame.as_mut().data_mut()[..PAGE_HEADER_SIZE])
+        bytemuck::from_bytes_mut(&mut self.page_frame.as_mut().data_mut()[..TABLE_PAGE_HEADER_SIZE])
     }
 
     /// Returns the slot array (mutable)
     pub(crate) fn slot_array_mut(&mut self) -> &mut [TupleInfo] {
         let tuple_cnt = self.header().tuple_cnt as usize;
-        let slots_end = PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
+        let slots_end = TABLE_PAGE_HEADER_SIZE + (tuple_cnt * TUPLE_INFO_SIZE);
         bytemuck::cast_slice_mut(
-            &mut self.page_frame.as_mut().data_mut()[PAGE_HEADER_SIZE..slots_end],
+            &mut self.page_frame.as_mut().data_mut()[TABLE_PAGE_HEADER_SIZE..slots_end],
         )
     }
 
@@ -140,6 +158,40 @@ impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
             deleted_tuple_cnt: 0,
             _padding: [0; 4],
         };
+    }
+
+    pub(crate) fn insert_tuple(&mut self, meta: &TupleMetadata, tuple: &Tuple) -> Result<RecordId> {
+        let tuple_size = tuple.tuple_size();
+        let tuple_offset = self.get_next_tuple_offset(tuple)?;
+
+        // Ensure there's enough space
+        if tuple_offset as usize + tuple_size > PAGE_SIZE {
+            return Result::from(Err(Error::OutOfBounds));
+        }
+
+        let tuple_count = self.header().tuple_cnt as usize;
+
+        // Write tuple data into the page
+        let page_data = self.page_frame.as_mut().data_mut();
+        page_data[tuple_offset as usize..tuple_offset as usize + tuple_size]
+            .copy_from_slice(&tuple.data());
+
+        // Update the slot array
+        let new_slot = TupleInfo {
+            offset: tuple_offset,
+            size_bytes: tuple_size as u16,
+            metadata: *meta,
+        };
+
+        // Extend the slot array
+        let slot_start = TABLE_PAGE_HEADER_SIZE + tuple_count * TUPLE_INFO_SIZE;
+        let slot_end = slot_start + TUPLE_INFO_SIZE;
+        page_data[slot_start..slot_end].copy_from_slice(bytemuck::bytes_of(&new_slot));
+
+        let header = self.header_mut();
+        header.tuple_cnt += 1;
+
+        Ok(RecordId::new(self.page_id(), tuple_count as u16))
     }
 }
 

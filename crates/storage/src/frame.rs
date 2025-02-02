@@ -1,6 +1,7 @@
-use crate::{page::INVALID_PAGE_ID, typedef::PageId};
-
-const PAGE_SIZE: usize = 4096;
+use crate::{
+    page::{INVALID_PAGE_ID, PAGE_SIZE},
+    typedef::PageId,
+};
 
 pub(crate) struct PageFrame {
     page_id: PageId,

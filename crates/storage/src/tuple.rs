@@ -7,11 +7,15 @@ impl Tuple {
         Tuple { data }
     }
 
-    fn data(&self) -> &Vec<u8> {
+    pub(crate) fn tuple_size(&self) -> usize {
+        self.data.len()
+    }
+
+    pub(crate) fn data(&self) -> &Vec<u8> {
         &self.data
     }
 
-    fn data_mut(&mut self) -> &mut Vec<u8> {
+    pub(crate) fn data_mut(&mut self) -> &mut Vec<u8> {
         &mut self.data
     }
 }
