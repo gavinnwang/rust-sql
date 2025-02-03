@@ -107,6 +107,7 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
             return Result::from(Err(Error::OutOfBounds));
         }
 
+        // copy the data in page frame to the tuple
         let tuple_data = page_data[data_offset..data_offset + data_size].to_vec();
         let tuple = Tuple::new(tuple_data);
 
