@@ -52,6 +52,20 @@ impl TableHeap {
         table_page_ref.get_tuple(rid)
     }
 
+    /// Delete a tuple given its record id and return the deleted tuple data and tuple meatdata.
+    pub fn delete_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
+        let old_data = self.get_tuple(rid)?;
+        let page_handle = BufferPoolManager::fetch_page_mut_handle(self.bpm.clone(), rid.page_id())
+            .ok_or_else(|| Error::IO(rid.to_string()))?;
+        let mut table_page_mut = TablePageMut::from(page_handle);
+
+        let mut deleted_metadata = old_data.0.clone();
+        deleted_metadata.set_deleted(true);
+        table_page_mut.update_tuple_metadata(rid, deleted_metadata)?;
+
+        Ok(old_data)
+    }
+
     /// Insert a tuple into the table heap.
     pub fn insert_tuple(&mut self, tuple: &Tuple) -> Result<RecordId> {
         // For a newly inserted tuple the metadata is by default not deleted

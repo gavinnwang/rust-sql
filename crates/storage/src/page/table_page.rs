@@ -219,15 +219,17 @@ impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
         Ok(RecordId::new(self.page_id(), tuple_count as u16))
     }
 
-    pub(crate) fn update_tuple_metadata(&mut self, rid: &RecordId) -> Result<()> {
+    pub(crate) fn update_tuple_metadata(
+        &mut self,
+        rid: &RecordId,
+        metadata: TupleMetadata,
+    ) -> Result<()> {
         self.validate_record_id(rid)?;
 
-        // Obtain a mutable reference to the slot array.
         let slot_array = self.slot_array_mut();
         let slot = &mut slot_array[rid.slot_id() as usize];
 
-        // For example, mark the tuple as deleted.
-        slot.metadata.set_deleted(true);
+        slot.metadata = metadata;
 
         Ok(())
     }

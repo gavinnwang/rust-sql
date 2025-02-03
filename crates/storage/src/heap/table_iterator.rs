@@ -140,20 +140,27 @@ mod tests {
         let tuple1 = Tuple::new(vec![1, 2, 3]);
         let tuple2 = Tuple::new(vec![4, 5, 6]);
         let tuple3 = Tuple::new(vec![7, 8, 9]);
+        let tuple4 = Tuple::new(vec![10, 11, 12]);
+        let tuple5 = Tuple::new(vec![13, 14, 15]);
 
         table_heap.insert_tuple(&tuple1)?;
         table_heap.insert_tuple(&tuple2)?;
-        table_heap.insert_tuple(&tuple3)?;
+        let rid3 = table_heap.insert_tuple(&tuple3)?;
+        table_heap.insert_tuple(&tuple4)?;
+        table_heap.insert_tuple(&tuple5)?;
+
+        table_heap.delete_tuple(&rid3).unwrap();
 
         // Create a table iterator that borrows the table heap.
         let iter = TableIterator::new(bpm.clone(), &table_heap);
 
         // Collect all tuples from the iterator.
         let tuples: Vec<_> = iter.collect::<Result<Vec<(RecordId, Tuple)>>>()?;
-        assert_eq!(tuples.len(), 3);
+        assert_eq!(tuples.len(), 4);
         assert_eq!(tuples[0].1.data(), &[1, 2, 3]);
         assert_eq!(tuples[1].1.data(), &[4, 5, 6]);
-        assert_eq!(tuples[2].1.data(), &[7, 8, 9]);
+        assert_eq!(tuples[2].1.data(), &[10, 11, 12]);
+        assert_eq!(tuples[3].1.data(), &[13, 14, 15]);
 
         Ok(())
     }
