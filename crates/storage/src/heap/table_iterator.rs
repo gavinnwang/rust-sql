@@ -129,7 +129,7 @@ mod tests {
     #[test]
     fn test_table_iterator() -> Result<()> {
         // Set up a test disk and buffer pool manager.
-        let disk = Arc::new(RwLock::new(DiskManager::new("iter_test.db").unwrap()));
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
