@@ -76,7 +76,7 @@ impl Replacer for LrukReplacer {
         todo!()
     }
 
-    fn size(&self) -> usize {
+    fn evictable_count(&self) -> usize {
         todo!()
     }
 

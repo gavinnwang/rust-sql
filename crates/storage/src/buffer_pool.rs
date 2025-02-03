@@ -188,7 +188,7 @@ impl BufferPoolManager {
     }
 
     fn free_frame_count(&self) -> usize {
-        self.free_list.len() + self.replacer.size()
+        self.free_list.len() + self.replacer.evictable_count()
     }
 }
 
@@ -249,7 +249,7 @@ mod tests {
             let mut handles = vec![];
 
             for i in 0..5 {
-                let bpm_clone = Arc::clone(&bpm);
+                let bpm_clone = bpm.clone();
                 let page_handle = create_page_handle(bpm_clone);
                 assert!(page_handle.is_some(), "Failed to allocate within capacity");
                 handles.push(page_handle);
