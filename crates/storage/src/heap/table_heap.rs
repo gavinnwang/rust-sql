@@ -153,7 +153,6 @@ mod tests {
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(2, disk, replacer)));
 
-        // Create a new table heap.
         let mut table_heap = TableHeap::new(bpm.clone());
 
         // Create and insert a huge tuple that nearly fills the page.
