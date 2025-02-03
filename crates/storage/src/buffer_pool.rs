@@ -119,22 +119,6 @@ impl BufferPoolManager {
         self.fetch_page_mut(page_id).map(|page| &*page)
     }
 
-    // pub(crate) fn fetch_page_handle(&mut self, page_id: PageId) -> Option<PageFrameRefHandle> {
-    //     // UNSAFE code to bypass borrow checker
-    //     let self_ptr = self as *mut Self;
-    //     let page_frame = self.fetch_page(page_id)?;
-    //
-    //     Some(PageFrameRefHandle::new(self_ptr, page_frame))
-    // }
-    //
-    // pub(crate) fn fetch_page_mut_handle(&mut self, page_id: PageId) -> Option<PageFrameMutHandle> {
-    //     // UNSAFE code to bypass borrow checker
-    //     let self_ptr = self as *mut Self;
-    //     let page_frame = self.fetch_page_mut(page_id)?;
-    //
-    //     Some(PageFrameMutHandle::new(self_ptr, page_frame))
-    // }
-
     pub(crate) fn unpin_page(&mut self, page_id: PageId, is_dirty: bool) {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
             let page_frame = &mut self.frames[frame_id];
