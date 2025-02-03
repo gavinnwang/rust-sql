@@ -1,3 +1,5 @@
+use rustdb_error::Error;
+
 use crate::disk::disk_manager::DiskManager;
 use crate::frame::PageFrame;
 use crate::frame_handle::{PageFrameMutHandle, PageFrameRefHandle};
@@ -36,14 +38,14 @@ impl BufferPoolManager {
     }
 
     /// try to find a frame in the buffer pool that is free, or pin count of zero
-    fn get_free_frame(&mut self) -> Option<FrameId> {
+    fn get_free_frame(&mut self) -> Result<FrameId> {
         // use the freelist if it has available frame
         if let Some(frame_id) = self.free_list.pop_front() {
-            return Some(frame_id);
+            return Ok(frame_id);
         }
 
         // otherwise evict a frame
-        let frame_id = self.replacer.evict()?;
+        let frame_id = self.replacer.evict().ok_or(Error::BufferPoolFull)?;
         let frame = &mut self.frames[frame_id];
         assert!(
             frame.pin_count() == 0,
@@ -61,10 +63,10 @@ impl BufferPoolManager {
 
         frame.reset();
 
-        Some(frame_id)
+        Ok(frame_id)
     }
 
-    fn create_page(&mut self) -> Option<&mut PageFrame> {
+    fn create_page(&mut self) -> Result<&mut PageFrame> {
         let new_page_id = {
             let mut disk = self.disk_manager.write().unwrap();
             disk.allocate_page().unwrap()
@@ -84,16 +86,16 @@ impl BufferPoolManager {
         self.replacer.record_access(frame_id);
         self.replacer.pin(frame_id);
 
-        Some(page_frame)
+        Ok(page_frame)
     }
 
-    fn fetch_page_mut(&mut self, page_id: PageId) -> Option<&mut PageFrame> {
+    fn fetch_page_mut(&mut self, page_id: PageId) -> Result<&mut PageFrame> {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
             let frame = &mut self.frames[frame_id];
             frame.increment_pin_count();
             self.replacer.record_access(frame_id);
             self.replacer.pin(frame_id);
-            return Some(frame);
+            return Ok(frame);
         }
 
         let frame_id = self.get_free_frame()?;
@@ -105,17 +107,21 @@ impl BufferPoolManager {
         page_frame.set_dirty(false);
         page_frame.set_pin_count(1);
 
+        self.replacer.record_access(frame_id);
+        self.replacer.pin(frame_id);
+
         let page_data = {
-            let mut disk = self.disk_manager.write().unwrap();
-            disk.read(page_id).unwrap().unwrap()
-        };
+            let mut disk = self.disk_manager.write()?;
+            disk.read(page_id)?
+        }
+        .ok_or(Error::IO(page_id.to_string()))?;
 
         page_frame.write(0, page_data.as_ref());
 
-        Some(page_frame)
+        Ok(page_frame)
     }
 
-    fn fetch_page(&mut self, page_id: PageId) -> Option<&PageFrame> {
+    fn fetch_page(&mut self, page_id: PageId) -> Result<&PageFrame> {
         self.fetch_page_mut(page_id).map(|page| &*page)
     }
 
@@ -177,37 +183,37 @@ impl BufferPoolManager {
 
     pub(crate) fn create_page_handle(
         bpm: Arc<RwLock<BufferPoolManager>>,
-    ) -> Option<PageFrameMutHandle<'static>> {
+    ) -> Result<PageFrameMutHandle<'static>> {
         let mut bpm_guard = bpm.write().unwrap();
 
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).create_page()? };
 
-        Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+        Ok(PageFrameMutHandle::new(bpm.clone(), page_frame))
     }
 
     pub(crate) fn fetch_page_handle(
         bpm: Arc<RwLock<BufferPoolManager>>,
         page_id: PageId,
-    ) -> Option<PageFrameRefHandle<'static>> {
+    ) -> Result<PageFrameRefHandle<'static>> {
         let mut bpm_guard = bpm.write().unwrap();
 
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).fetch_page(page_id)? };
 
-        Some(PageFrameRefHandle::new(bpm.clone(), page_frame))
+        Ok(PageFrameRefHandle::new(bpm.clone(), page_frame))
     }
 
     pub(crate) fn fetch_page_mut_handle(
         bpm: Arc<RwLock<BufferPoolManager>>,
         page_id: PageId,
-    ) -> Option<PageFrameMutHandle<'static>> {
+    ) -> Result<PageFrameMutHandle<'static>> {
         let mut bpm_guard = bpm.write().unwrap();
 
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(page_id)? };
 
-        Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+        Ok(PageFrameMutHandle::new(bpm.clone(), page_frame))
     }
 }
 
@@ -235,7 +241,7 @@ mod tests {
             for i in 0..5 {
                 let bpm_clone = bpm.clone();
                 let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
-                assert!(page_handle.is_some());
+                assert!(page_handle.is_ok());
                 handles.push(page_handle);
                 assert_eq!(pool_size - i - 1, bpm.read().unwrap().free_frame_count());
             }
@@ -246,7 +252,7 @@ mod tests {
                 // Create a new page when buffer pool has no free frame, should return None
                 let bpm_clone = bpm.clone();
                 let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
-                assert!(page_handle.is_none());
+                assert!(page_handle.is_err());
             }
 
             handles.pop();
@@ -254,7 +260,7 @@ mod tests {
 
             let bpm_clone = bpm.clone();
             let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
-            assert!(page_handle.is_some());
+            assert!(page_handle.is_ok());
         }
         assert_eq!(5, bpm.read().unwrap().free_frame_count());
     }

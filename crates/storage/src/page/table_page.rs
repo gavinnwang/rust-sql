@@ -328,7 +328,7 @@ mod tests {
     fn test_insert_and_get_tuple() {
         let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
         let replacer = Box::new(LruReplacer::new());
-        let mut bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
+        let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
         let mut page_id = INVALID_PAGE_ID;
         let mut insert_record_id = INVALID_RECORD_ID;

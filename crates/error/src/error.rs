@@ -17,6 +17,8 @@ pub enum Error {
     ArithmeticOverflow,
     /// Out-of-bounds access occurred.
     OutOfBounds,
+    /// Buffer pool at capacity
+    BufferPoolFull,
 }
 
 impl std::error::Error for Error {}
@@ -28,6 +30,7 @@ impl std::fmt::Display for Error {
             Error::IO(msg) => write!(f, "IO error: {}", msg),
             Error::ArithmeticOverflow => write!(f, "Arithmetic overflow"),
             Error::OutOfBounds => write!(f, "Out of bounds"),
+            Error::BufferPoolFull => write!(f, "Buffer pool is at capacity"),
         }
     }
 }
