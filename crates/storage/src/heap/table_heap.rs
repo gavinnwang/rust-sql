@@ -37,6 +37,10 @@ impl TableHeap {
         }
     }
 
+    pub(crate) fn first_page_id(&self) -> PageId {
+        self.first_page_id
+    }
+
     /// Retrieve a tuple given its record id.
     pub fn get_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
         // Fetch an immutable handle to the page where the tuple should reside.

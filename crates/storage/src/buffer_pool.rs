@@ -43,7 +43,7 @@ impl BufferPoolManager {
         }
 
         // otherwise evict a frame
-        let frame_id = self.replacer.evict().expect("Failed to evict a frame. Either increase bpm capacity or make sure pages are unpinned.");
+        let frame_id = self.replacer.evict()?;
         let frame = &mut self.frames[frame_id];
         assert!(
             frame.pin_count() == 0,
@@ -257,6 +257,13 @@ mod tests {
             }
 
             assert_eq!(0, bpm.read().unwrap().free_frame_count());
+
+            {
+                // Create a new page when buffer pool has no free frame, should return None
+                let bpm_clone = bpm.clone();
+                let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
+                assert!(page_handle.is_none());
+            }
         }
         assert_eq!(5, bpm.read().unwrap().free_frame_count());
     }

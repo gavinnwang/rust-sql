@@ -1,4 +1,4 @@
-pub(crate) struct Tuple {
+pub struct Tuple {
     data: Vec<u8>,
 }
 
