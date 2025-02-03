@@ -245,16 +245,19 @@ mod tests {
 
         assert_eq!(pool_size, bpm.read().unwrap().free_frame_count());
 
-        let mut handles = vec![];
+        {
+            let mut handles = vec![];
 
-        for i in 0..5 {
-            let bpm_clone = Arc::clone(&bpm);
-            let page_handle = create_page_handle(bpm_clone);
-            assert!(page_handle.is_some(), "Failed to allocate within capacity");
-            handles.push(page_handle);
-            assert_eq!(pool_size - i - 1, bpm.read().unwrap().free_frame_count());
+            for i in 0..5 {
+                let bpm_clone = Arc::clone(&bpm);
+                let page_handle = create_page_handle(bpm_clone);
+                assert!(page_handle.is_some(), "Failed to allocate within capacity");
+                handles.push(page_handle);
+                assert_eq!(pool_size - i - 1, bpm.read().unwrap().free_frame_count());
+            }
+
+            assert_eq!(0, bpm.read().unwrap().free_frame_count());
         }
-
-        assert_eq!(0, bpm.read().unwrap().free_frame_count());
+        assert_eq!(5, bpm.read().unwrap().free_frame_count());
     }
 }
