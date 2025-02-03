@@ -108,9 +108,7 @@ mod tests {
     /// Test that we can insert a tuple into the table heap and then retrieve it correctly.
     #[test]
     fn test_table_heap_insert_and_get() -> Result<()> {
-        let disk = Arc::new(RwLock::new(
-            DiskManager::new("test_heap_insert_and_get.db").unwrap(),
-        ));
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
@@ -131,9 +129,7 @@ mod tests {
     /// triggers allocation of a new page and that both tuples are correctly stored.
     #[test]
     fn test_table_heap_new_page_allocation() -> Result<()> {
-        let disk = Arc::new(RwLock::new(
-            DiskManager::new("test_heap_new_page_allocation.db").unwrap(),
-        ));
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(2, disk, replacer)));
 
@@ -141,14 +137,14 @@ mod tests {
         let mut table_heap = TableHeap::new(bpm.clone());
 
         // Create and insert a huge tuple that nearly fills the page.
-        let huge_tuple_size = PAGE_SIZE - TABLE_PAGE_HEADER_SIZE - TUPLE_INFO_SIZE - 10;
+        let huge_tuple_size = PAGE_SIZE - TABLE_PAGE_HEADER_SIZE - TUPLE_INFO_SIZE - 5;
         let huge_tuple_data = vec![1; huge_tuple_size];
         let huge_tuple = Tuple::new(huge_tuple_data.clone());
         let rid1 = table_heap.insert_tuple(&huge_tuple)?;
 
-        // Insert another, small tuple. This insertion should detect insufficient space in the
+        // Insert another tuple. This insertion should detect insufficient space in the
         // current page and cause a new page to be allocated.
-        let small_tuple_data = vec![2, 3, 4, 5];
+        let small_tuple_data = vec![2, 3, 4, 5, 2, 3, 4, 5, 2, 3, 4, 5, 2, 3, 4, 5];
         let small_tuple = Tuple::new(small_tuple_data.clone());
         let rid2 = table_heap.insert_tuple(&small_tuple)?;
 
