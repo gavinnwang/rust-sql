@@ -25,31 +25,30 @@ pub(crate) struct TupleInfo {
     metadata: TupleMetadata,
 }
 
+const TABLE_PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
+const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
+
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
 pub(crate) struct TupleMetadata {
     is_deleted: u8,
-    is_null: u8,
+    _padding: [u8; 1],
 }
 
-const TABLE_PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
-const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
-
 impl TupleMetadata {
+    pub fn new(is_deleted: bool) -> Self {
+        Self {
+            is_deleted: is_deleted as u8,
+            _padding: [0; 1],
+        }
+    }
+
     pub(crate) fn is_deleted(&self) -> bool {
         self.is_deleted != 0
     }
 
     pub(crate) fn set_deleted(&mut self, deleted: bool) {
         self.is_deleted = deleted as u8;
-    }
-
-    pub(crate) fn is_null(&self) -> bool {
-        self.is_null != 0
-    }
-
-    pub(crate) fn set_null(&mut self, is_null: bool) {
-        self.is_null = is_null as u8;
     }
 }
 
@@ -165,6 +164,21 @@ impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
         };
     }
 
+    pub(crate) fn set_next_page_id(&mut self, next_page_id: PageId) {
+        let header = self.header_mut();
+        header.next_page_id = next_page_id;
+    }
+
+    pub(crate) fn set_tuple_count(&mut self, tuple_count: u16) {
+        let header = self.header_mut();
+        header.tuple_cnt = tuple_count;
+    }
+
+    pub(crate) fn set_deleted_tuple_count(&mut self, deleted_tuple_count: u16) {
+        let header = self.header_mut();
+        header.deleted_tuple_cnt = deleted_tuple_count;
+    }
+
     pub(crate) fn insert_tuple(&mut self, meta: &TupleMetadata, tuple: &Tuple) -> Result<RecordId> {
         let tuple_size = tuple.tuple_size();
         let tuple_offset = self.get_next_tuple_offset(tuple)?;
@@ -259,10 +273,10 @@ mod tests {
             let slots_mut = table_page.slot_array_mut();
             slots_mut[0].offset = 55;
             slots_mut[1].offset = 11;
-            slots_mut[1].metadata.set_null(true);
+            slots_mut[1].metadata.set_deleted(true);
             assert_eq!(slots_mut[0].offset, 55);
             assert_eq!(slots_mut[1].offset, 11);
-            assert_eq!(slots_mut[1].metadata.is_null(), true);
+            assert_eq!(slots_mut[1].metadata.is_deleted(), true);
 
             table_page.header_mut().tuple_cnt = 3;
 
@@ -270,7 +284,7 @@ mod tests {
             assert_eq!(slots.len(), 3);
             assert_eq!(slots[0].offset, 55);
             assert_eq!(slots[1].offset, 11);
-            assert_eq!(slots[1].metadata.is_null(), true);
+            assert_eq!(slots[1].metadata.is_deleted(), true);
         }
 
         let frame_handle_1 = BufferPoolManager::fetch_page_handle(bpm.clone(), page_id).unwrap();
@@ -285,7 +299,7 @@ mod tests {
         assert_eq!(slots.len(), 3);
         assert_eq!(slots[0].offset, 55);
         assert_eq!(slots[1].offset, 11);
-        assert_eq!(slots[1].metadata.is_null(), true);
+        assert_eq!(slots[1].metadata.is_deleted(), true);
     }
 
     #[test]
@@ -298,10 +312,7 @@ mod tests {
         let mut insert_record_id = INVALID_RECORD_ID;
 
         // tuple metadata
-        let metadata = TupleMetadata {
-            is_deleted: 0,
-            is_null: 0,
-        };
+        let metadata = TupleMetadata::new(true);
 
         let tuple_data = vec![1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8];
         {
@@ -327,7 +338,6 @@ mod tests {
 
             // Ensure retrieved tuple matches inserted tuple
             assert_eq!(retrieved_meta.is_deleted(), metadata.is_deleted());
-            assert_eq!(retrieved_meta.is_null(), metadata.is_null());
             assert_eq!(retrieved_tuple.data(), &tuple_data);
         }
         let frame_handle_1 = BufferPoolManager::fetch_page_handle(bpm.clone(), page_id).unwrap();
@@ -338,7 +348,6 @@ mod tests {
 
         // Ensure retrieved tuple matches inserted tuple
         assert_eq!(retrieved_meta.is_deleted(), metadata.is_deleted());
-        assert_eq!(retrieved_meta.is_null(), metadata.is_null());
         assert_eq!(retrieved_tuple.data(), &tuple_data);
     }
 }
