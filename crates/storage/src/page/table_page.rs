@@ -25,8 +25,8 @@ pub(crate) struct TupleInfo {
     metadata: TupleMetadata,
 }
 
-const TABLE_PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
-const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
+pub(crate) const TABLE_PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
+pub(crate) const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
 
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]

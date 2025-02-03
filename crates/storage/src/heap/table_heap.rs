@@ -93,3 +93,74 @@ impl TableHeap {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, RwLock};
+
+    use crate::disk::disk_manager::DiskManager;
+    use crate::heap::table_heap::TableHeap;
+    use crate::page::table_page::{TABLE_PAGE_HEADER_SIZE, TUPLE_INFO_SIZE};
+    use crate::page::PAGE_SIZE;
+    use crate::replacer::lru_replacer::LruReplacer;
+    use crate::{buffer_pool::BufferPoolManager, tuple::Tuple, Result};
+
+    /// Test that we can insert a tuple into the table heap and then retrieve it correctly.
+    #[test]
+    fn test_table_heap_insert_and_get() -> Result<()> {
+        let disk = Arc::new(RwLock::new(
+            DiskManager::new("test_heap_insert_and_get.db").unwrap(),
+        ));
+        let replacer = Box::new(LruReplacer::new());
+        let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
+
+        let mut table_heap = TableHeap::new(bpm.clone());
+
+        let tuple_data = vec![10, 20, 30, 40, 50];
+        let tuple = Tuple::new(tuple_data.clone());
+
+        let rid = table_heap.insert_tuple(&tuple)?;
+        let (meta, retrieved_tuple) = table_heap.get_tuple(&rid)?;
+        assert_eq!(retrieved_tuple.data(), tuple_data.as_slice());
+        assert!(!meta.is_deleted());
+
+        Ok(())
+    }
+
+    /// Test that a tuple insertion that would overflow the current page
+    /// triggers allocation of a new page and that both tuples are correctly stored.
+    #[test]
+    fn test_table_heap_new_page_allocation() -> Result<()> {
+        let disk = Arc::new(RwLock::new(
+            DiskManager::new("test_heap_new_page_allocation.db").unwrap(),
+        ));
+        let replacer = Box::new(LruReplacer::new());
+        let bpm = Arc::new(RwLock::new(BufferPoolManager::new(2, disk, replacer)));
+
+        // Create a new table heap.
+        let mut table_heap = TableHeap::new(bpm.clone());
+
+        // Create and insert a huge tuple that nearly fills the page.
+        let huge_tuple_size = PAGE_SIZE - TABLE_PAGE_HEADER_SIZE - TUPLE_INFO_SIZE - 10;
+        let huge_tuple_data = vec![1; huge_tuple_size];
+        let huge_tuple = Tuple::new(huge_tuple_data.clone());
+        let rid1 = table_heap.insert_tuple(&huge_tuple)?;
+
+        // Insert another, small tuple. This insertion should detect insufficient space in the
+        // current page and cause a new page to be allocated.
+        let small_tuple_data = vec![2, 3, 4, 5];
+        let small_tuple = Tuple::new(small_tuple_data.clone());
+        let rid2 = table_heap.insert_tuple(&small_tuple)?;
+
+        // Verify that the two record IDs have different page ids.
+        assert_ne!(rid1.page_id(), rid2.page_id());
+
+        // Retrieve both tuples and verify their data.
+        let (_meta1, retrieved_huge) = table_heap.get_tuple(&rid1)?;
+        let (_meta2, retrieved_small) = table_heap.get_tuple(&rid2)?;
+        assert_eq!(retrieved_huge.data(), huge_tuple_data.as_slice());
+        assert_eq!(retrieved_small.data(), small_tuple_data.as_slice());
+
+        Ok(())
+    }
+}
