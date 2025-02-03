@@ -64,13 +64,6 @@ impl BufferPoolManager {
         Some(frame_id)
     }
 
-    pub(crate) fn create_page_handle(&mut self) -> Option<PageFrameMutHandle> {
-        // UNSAFE code to bypass borrow checker
-        let self_ptr = self as *mut Self;
-        let frame = self.create_page()?;
-        Some(PageFrameMutHandle::new(self_ptr, frame))
-    }
-
     fn create_page(&mut self) -> Option<&mut PageFrame> {
         let new_page_id = {
             let mut disk = self.disk_manager.write().unwrap();
@@ -126,21 +119,21 @@ impl BufferPoolManager {
         self.fetch_page_mut(page_id).map(|page| &*page)
     }
 
-    pub(crate) fn fetch_page_handle(&mut self, page_id: PageId) -> Option<PageFrameRefHandle> {
-        // UNSAFE code to bypass borrow checker
-        let self_ptr = self as *mut Self;
-        let page_frame = self.fetch_page(page_id)?;
-
-        Some(PageFrameRefHandle::new(self_ptr, page_frame))
-    }
-
-    pub(crate) fn fetch_page_mut_handle(&mut self, page_id: PageId) -> Option<PageFrameMutHandle> {
-        // UNSAFE code to bypass borrow checker
-        let self_ptr = self as *mut Self;
-        let page_frame = self.fetch_page_mut(page_id)?;
-
-        Some(PageFrameMutHandle::new(self_ptr, page_frame))
-    }
+    // pub(crate) fn fetch_page_handle(&mut self, page_id: PageId) -> Option<PageFrameRefHandle> {
+    //     // UNSAFE code to bypass borrow checker
+    //     let self_ptr = self as *mut Self;
+    //     let page_frame = self.fetch_page(page_id)?;
+    //
+    //     Some(PageFrameRefHandle::new(self_ptr, page_frame))
+    // }
+    //
+    // pub(crate) fn fetch_page_mut_handle(&mut self, page_id: PageId) -> Option<PageFrameMutHandle> {
+    //     // UNSAFE code to bypass borrow checker
+    //     let self_ptr = self as *mut Self;
+    //     let page_frame = self.fetch_page_mut(page_id)?;
+    //
+    //     Some(PageFrameMutHandle::new(self_ptr, page_frame))
+    // }
 
     pub(crate) fn unpin_page(&mut self, page_id: PageId, is_dirty: bool) {
         if let Some(&frame_id) = self.page_table.get(&page_id) {
@@ -199,15 +192,47 @@ impl BufferPoolManager {
     }
 }
 
+pub(crate) fn create_page_handle(
+    bpm: Arc<RwLock<BufferPoolManager>>,
+) -> Option<PageFrameMutHandle<'static>> {
+    let mut bpm_guard = bpm.write().unwrap();
+
+    let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
+    let page_frame = unsafe { (*bpm_ptr).create_page()? };
+
+    Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+}
+
+pub(crate) fn fetch_page_handle(
+    bpm: Arc<RwLock<BufferPoolManager>>,
+    page_id: PageId,
+) -> Option<PageFrameRefHandle<'static>> {
+    let mut bpm_guard = bpm.write().unwrap();
+
+    let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
+    let page_frame = unsafe { (*bpm_ptr).fetch_page(page_id)? };
+
+    Some(PageFrameRefHandle::new(bpm.clone(), page_frame))
+}
+
+pub(crate) fn fetch_page_mut_handle(
+    bpm: Arc<RwLock<BufferPoolManager>>,
+    page_id: PageId,
+) -> Option<PageFrameMutHandle<'static>> {
+    let mut bpm_guard = bpm.write().unwrap();
+
+    let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
+    let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(page_id)? };
+
+    Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+}
+
 #[cfg(test)]
 mod tests {
     use crate::buffer_pool::BufferPoolManager;
     use crate::disk::disk_manager::DiskManager;
     use crate::replacer::lru_replacer::LruReplacer;
-    use std::{
-        sync::{Arc, RwLock},
-        thread,
-    };
+    use std::sync::{Arc, RwLock};
 
     #[test]
     fn test_create_pages_beyond_capacity() {

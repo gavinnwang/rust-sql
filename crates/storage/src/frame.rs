@@ -77,15 +77,3 @@ impl PageFrame {
         self.data[offset..offset + data.len()].copy_from_slice(data);
     }
 }
-
-impl AsRef<PageFrame> for PageFrame {
-    fn as_ref(&self) -> &PageFrame {
-        self
-    }
-}
-
-impl AsMut<PageFrame> for PageFrame {
-    fn as_mut(&mut self) -> &mut PageFrame {
-        self
-    }
-}
