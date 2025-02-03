@@ -190,46 +190,46 @@ impl BufferPoolManager {
     fn free_frame_count(&self) -> usize {
         self.free_list.len() + self.replacer.evictable_count()
     }
-}
 
-pub(crate) fn create_page_handle(
-    bpm: Arc<RwLock<BufferPoolManager>>,
-) -> Option<PageFrameMutHandle<'static>> {
-    let mut bpm_guard = bpm.write().unwrap();
+    pub(crate) fn create_page_handle(
+        bpm: Arc<RwLock<BufferPoolManager>>,
+    ) -> Option<PageFrameMutHandle<'static>> {
+        let mut bpm_guard = bpm.write().unwrap();
 
-    let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
-    let page_frame = unsafe { (*bpm_ptr).create_page()? };
+        let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
+        let page_frame = unsafe { (*bpm_ptr).create_page()? };
 
-    Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
-}
+        Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+    }
 
-pub(crate) fn fetch_page_handle(
-    bpm: Arc<RwLock<BufferPoolManager>>,
-    page_id: PageId,
-) -> Option<PageFrameRefHandle<'static>> {
-    let mut bpm_guard = bpm.write().unwrap();
+    pub(crate) fn fetch_page_handle(
+        bpm: Arc<RwLock<BufferPoolManager>>,
+        page_id: PageId,
+    ) -> Option<PageFrameRefHandle<'static>> {
+        let mut bpm_guard = bpm.write().unwrap();
 
-    let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
-    let page_frame = unsafe { (*bpm_ptr).fetch_page(page_id)? };
+        let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
+        let page_frame = unsafe { (*bpm_ptr).fetch_page(page_id)? };
 
-    Some(PageFrameRefHandle::new(bpm.clone(), page_frame))
-}
+        Some(PageFrameRefHandle::new(bpm.clone(), page_frame))
+    }
 
-pub(crate) fn fetch_page_mut_handle(
-    bpm: Arc<RwLock<BufferPoolManager>>,
-    page_id: PageId,
-) -> Option<PageFrameMutHandle<'static>> {
-    let mut bpm_guard = bpm.write().unwrap();
+    pub(crate) fn fetch_page_mut_handle(
+        bpm: Arc<RwLock<BufferPoolManager>>,
+        page_id: PageId,
+    ) -> Option<PageFrameMutHandle<'static>> {
+        let mut bpm_guard = bpm.write().unwrap();
 
-    let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
-    let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(page_id)? };
+        let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
+        let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(page_id)? };
 
-    Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+        Some(PageFrameMutHandle::new(bpm.clone(), page_frame))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer_pool::{create_page_handle, BufferPoolManager};
+    use crate::buffer_pool::BufferPoolManager;
     use crate::disk::disk_manager::DiskManager;
     use crate::replacer::lru_replacer::LruReplacer;
     use std::sync::{Arc, RwLock};
@@ -250,7 +250,7 @@ mod tests {
 
             for i in 0..5 {
                 let bpm_clone = bpm.clone();
-                let page_handle = create_page_handle(bpm_clone);
+                let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
                 assert!(page_handle.is_some(), "Failed to allocate within capacity");
                 handles.push(page_handle);
                 assert_eq!(pool_size - i - 1, bpm.read().unwrap().free_frame_count());

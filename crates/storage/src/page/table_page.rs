@@ -222,11 +222,8 @@ mod tests {
     use std::sync::{Arc, RwLock};
 
     use crate::{
-        buffer_pool::{create_page_handle, fetch_page_handle, BufferPoolManager},
-        disk::disk_manager::DiskManager,
-        page::INVALID_PAGE_ID,
-        record_id::INVALID_RECORD_ID,
-        replacer::lru_replacer::LruReplacer,
+        buffer_pool::BufferPoolManager, disk::disk_manager::DiskManager, page::INVALID_PAGE_ID,
+        record_id::INVALID_RECORD_ID, replacer::lru_replacer::LruReplacer,
     };
 
     use super::*;
@@ -239,7 +236,7 @@ mod tests {
 
         let mut page_id = INVALID_PAGE_ID;
         {
-            let frame_handle = create_page_handle(bpm.clone()).unwrap();
+            let frame_handle = BufferPoolManager::create_page_handle(bpm.clone()).unwrap();
             let mut table_page = TablePageMut::from(frame_handle);
 
             table_page.init_header(2);
@@ -276,7 +273,7 @@ mod tests {
             assert_eq!(slots[1].metadata.is_null(), true);
         }
 
-        let frame_handle_1 = fetch_page_handle(bpm.clone(), page_id).unwrap();
+        let frame_handle_1 = BufferPoolManager::fetch_page_handle(bpm.clone(), page_id).unwrap();
 
         let table_page1 = TablePageRef::from(frame_handle_1);
 
@@ -308,7 +305,7 @@ mod tests {
 
         let tuple_data = vec![1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8];
         {
-            let frame_handle = create_page_handle(bpm.clone()).unwrap();
+            let frame_handle = BufferPoolManager::create_page_handle(bpm.clone()).unwrap();
             let mut table_page = TablePageMut::from(frame_handle);
 
             page_id = table_page.page_id();
@@ -333,7 +330,7 @@ mod tests {
             assert_eq!(retrieved_meta.is_null(), metadata.is_null());
             assert_eq!(retrieved_tuple.data(), &tuple_data);
         }
-        let frame_handle_1 = fetch_page_handle(bpm.clone(), page_id).unwrap();
+        let frame_handle_1 = BufferPoolManager::fetch_page_handle(bpm.clone(), page_id).unwrap();
 
         let table_page1 = TablePageRef::from(frame_handle_1);
         // Retrieve the tuple

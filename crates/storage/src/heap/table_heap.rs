@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use rustdb_error::Error;
 
 use crate::{
-    buffer_pool::{create_page_handle, fetch_page_handle, BufferPoolManager},
+    buffer_pool::BufferPoolManager,
     page::table_page::{TablePageRef, TupleMetadata},
     record_id::RecordId,
     tuple::Tuple,
@@ -21,8 +21,8 @@ pub struct TableHeap {
 impl TableHeap {
     pub fn new(bpm: Arc<RwLock<BufferPoolManager>>) -> TableHeap {
         let first_page_id = {
-            let mut root_page_handle =
-                create_page_handle(bpm.clone()).expect("Failed to create root page for table heap");
+            let mut root_page_handle = BufferPoolManager::create_page_handle(bpm.clone())
+                .expect("Failed to create root page for table heap");
             root_page_handle.page_frame_mut().page_id()
         };
 
@@ -35,8 +35,8 @@ impl TableHeap {
     }
 
     pub fn get_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
-        let page_handle =
-            fetch_page_handle(self.bpm.clone(), rid.page_id()).ok_or(Error::IO(rid.to_string()))?;
+        let page_handle = BufferPoolManager::fetch_page_handle(self.bpm.clone(), rid.page_id())
+            .ok_or(Error::IO(rid.to_string()))?;
 
         let table_page_ref = TablePageRef::from(page_handle);
 

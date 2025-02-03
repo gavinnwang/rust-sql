@@ -72,7 +72,6 @@ impl<'a> AsRef<PageFrame> for PageFrameMutHandle<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::buffer_pool::create_page_handle;
     use crate::disk::disk_manager::DiskManager;
     use crate::{buffer_pool::BufferPoolManager, replacer::lru_replacer::LruReplacer};
     use std::sync::{Arc, RwLock};
@@ -84,7 +83,7 @@ mod tests {
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
         {
-            let handle = create_page_handle(bpm.clone());
+            let handle = BufferPoolManager::create_page_handle(bpm.clone());
             let cnt = handle.unwrap().page_frame.pin_count();
             assert_eq!(1, cnt);
         }
