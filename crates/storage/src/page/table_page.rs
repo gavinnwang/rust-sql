@@ -89,9 +89,7 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
     }
 
     pub(crate) fn get_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
-        if rid.page_id() != self.page_id() || rid.slot_id() >= self.tuple_count() {
-            return Result::from(Error::InvalidInput(rid.to_string()));
-        }
+        self.validate_record_id(rid)?;
 
         let slot_array = self.slot_array();
         let tuple_info = slot_array[rid.slot_id() as usize];
@@ -134,6 +132,14 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         }
 
         Ok(tuple_offset as u16)
+    }
+
+    fn validate_record_id(&self, rid: &RecordId) -> Result<()> {
+        if rid.page_id() != self.page_id() || rid.slot_id() >= self.tuple_count() {
+            Err(Error::InvalidInput(rid.to_string()))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -211,6 +217,19 @@ impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
         header.tuple_cnt += 1;
 
         Ok(RecordId::new(self.page_id(), tuple_count as u16))
+    }
+
+    pub(crate) fn update_tuple_metadata(&mut self, rid: &RecordId) -> Result<()> {
+        self.validate_record_id(rid)?;
+
+        // Obtain a mutable reference to the slot array.
+        let slot_array = self.slot_array_mut();
+        let slot = &mut slot_array[rid.slot_id() as usize];
+
+        // For example, mark the tuple as deleted.
+        slot.metadata.set_deleted(true);
+
+        Ok(())
     }
 }
 

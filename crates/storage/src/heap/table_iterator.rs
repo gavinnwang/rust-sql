@@ -1,5 +1,3 @@
-// table_iterator.rs
-
 use std::sync::{Arc, RwLock};
 
 use crate::page::INVALID_PAGE_ID;
@@ -9,7 +7,6 @@ use crate::{
 };
 use rustdb_error::Error;
 
-// Bring in the TableHeap type.
 use super::table_heap::TableHeap;
 
 /// An iterator over all non-deleted tuples in a table heap.
