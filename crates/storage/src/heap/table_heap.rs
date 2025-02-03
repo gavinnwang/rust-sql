@@ -24,9 +24,11 @@ impl TableHeap {
     pub fn new(bpm: Arc<RwLock<BufferPoolManager>>) -> TableHeap {
         // Create the first (root) page.
         let first_page_id = {
-            let mut root_page_handle = BufferPoolManager::create_page_handle(bpm.clone())
+            let root_page_handle = BufferPoolManager::create_page_handle(bpm.clone())
                 .expect("Failed to create root page for table heap");
-            root_page_handle.page_frame_mut().page_id()
+            let mut table_page = TablePageMut::from(root_page_handle);
+            table_page.init_header(INVALID_PAGE_ID);
+            table_page.page_id()
         };
 
         TableHeap {
