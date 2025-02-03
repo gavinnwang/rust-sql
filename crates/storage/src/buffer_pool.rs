@@ -251,7 +251,7 @@ mod tests {
             for i in 0..5 {
                 let bpm_clone = bpm.clone();
                 let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
-                assert!(page_handle.is_some(), "Failed to allocate within capacity");
+                assert!(page_handle.is_some());
                 handles.push(page_handle);
                 assert_eq!(pool_size - i - 1, bpm.read().unwrap().free_frame_count());
             }
@@ -264,6 +264,13 @@ mod tests {
                 let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
                 assert!(page_handle.is_none());
             }
+
+            handles.pop();
+            assert_eq!(1, bpm.read().unwrap().free_frame_count());
+
+            let bpm_clone = bpm.clone();
+            let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
+            assert!(page_handle.is_some());
         }
         assert_eq!(5, bpm.read().unwrap().free_frame_count());
     }
