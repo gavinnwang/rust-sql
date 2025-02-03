@@ -2,6 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use rustdb_error::Error;
 
+use crate::page::INVALID_PAGE_ID;
 use crate::{
     buffer_pool::BufferPoolManager,
     page::table_page::{TablePageMut, TablePageRef, TupleMetadata},
@@ -10,8 +11,6 @@ use crate::{
     typedef::PageId,
     Result,
 };
-// We assume an INVALID_PAGE_ID constant is defined somewhere.
-use crate::page::INVALID_PAGE_ID;
 
 pub struct TableHeap {
     page_cnt: u32,
@@ -21,7 +20,7 @@ pub struct TableHeap {
 }
 
 impl TableHeap {
-    /// Create a new table heap. A new “root” page is allocated from the buffer pool.
+    /// Create a new table heap. A new root page is allocated from the buffer pool.
     pub fn new(bpm: Arc<RwLock<BufferPoolManager>>) -> TableHeap {
         // Create the first (root) page.
         let first_page_id = {
@@ -66,7 +65,7 @@ impl TableHeap {
         // Try inserting the tuple into the current page.
         match table_page.insert_tuple(&metadata, tuple) {
             Ok(rid) => Ok(rid),
-            // If there isn’t enough free space...
+            // If there isn’t enough free space
             Err(Error::OutOfBounds) => {
                 // Allocate a new page.
                 let new_page_handle = BufferPoolManager::create_page_handle(self.bpm.clone())

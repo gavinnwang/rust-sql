@@ -56,7 +56,7 @@ impl BufferPoolManager {
             disk.write(frame.page_id(), frame.data()).unwrap();
         }
 
-        // if a frame is evicted to make space, we should remove the stale record in the page table
+        // if a frame is evicted to make space, remove the stale record in the page table
         self.page_table.remove(&frame.page_id());
 
         frame.reset();
