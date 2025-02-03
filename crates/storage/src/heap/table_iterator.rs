@@ -96,7 +96,7 @@ impl<'a> Iterator for TableIterator<'a> {
             match tuple_result {
                 Ok((meta, tuple)) => {
                     if !meta.is_deleted() {
-                        // Found a live tuple; return it.
+                        // Found a non-deleted tuple; return it.
                         return Some(Ok((rid, tuple)));
                     }
                     // Otherwise, skip this tuple (and continue the loop).
@@ -133,10 +133,8 @@ mod tests {
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
-        // Create a new table heap.
         let mut table_heap = TableHeap::new(bpm.clone());
 
-        // Insert several tuples.
         let tuple1 = Tuple::new(vec![1, 2, 3]);
         let tuple2 = Tuple::new(vec![4, 5, 6]);
         let tuple3 = Tuple::new(vec![7, 8, 9]);
@@ -151,7 +149,6 @@ mod tests {
 
         table_heap.delete_tuple(&rid3).unwrap();
 
-        // Create a table iterator that borrows the table heap.
         let iter = TableIterator::new(bpm.clone(), &table_heap);
 
         // Collect all tuples from the iterator.
