@@ -91,7 +91,7 @@ mod tests {
     }
     #[test]
     fn test_combined_page_and_tuple_iterators() -> Result<()> {
-        let disk = Arc::new(RwLock::new(DiskManager::new("test_combined.db").unwrap()));
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
         let mut table_heap = TableHeap::new(bpm.clone());
