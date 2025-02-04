@@ -40,14 +40,14 @@ mod tests {
     use crate::{
         buffer_pool::BufferPoolManager,
         disk::disk_manager::DiskManager,
-        heap::table_heap::TableHeap,
+        heap::{table_heap::TableHeap, table_page_iterator::TablePageIterator},
         page::table_page::TablePageRef,
         replacer::lru_replacer::LruReplacer,
         tuple::{Tuple, TupleRef},
+        typedef::PageId,
         Result,
     };
 
-    // Import the iterator that returns TupleRef values.
     use super::TableTupleIterator;
 
     #[test]
@@ -87,6 +87,46 @@ mod tests {
         assert_eq!(collected[0], t1_data);
         assert_eq!(collected[1], t2_data);
         assert_eq!(collected[2], t3_data);
+
+        Ok(())
+    }
+    #[test]
+    fn test_combined_page_and_tuple_iterators() -> Result<()> {
+        let disk = Arc::new(RwLock::new(DiskManager::new("test_combined.db").unwrap()));
+        let replacer = Box::new(LruReplacer::new());
+        let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
+        let mut table_heap = TableHeap::new(bpm.clone());
+
+        let pages_wanted = 10;
+        let mut num_tuples = 0;
+        let mut inserted_data: Vec<Vec<u8>> = Vec::new();
+        loop {
+            let tuple = Tuple::new(vec![1, 2, 3]);
+            let rid = table_heap.insert_tuple(&tuple)?;
+            num_tuples += 1;
+            inserted_data.push(tuple.data().to_vec());
+            if rid.page_id() >= pages_wanted {
+                break;
+            }
+        }
+
+        let mut page_iter = TablePageIterator::new(bpm.clone(), table_heap.first_page_id());
+        let mut all_tuples: Vec<Vec<u8>> = Vec::new();
+
+        while let Some(page_result) = page_iter.next() {
+            let page: TablePageRef = page_result?;
+            let mut tuple_iter = TableTupleIterator::new(&page);
+            while let Some(tuple_result) = tuple_iter.next() {
+                let tuple_ref: TupleRef = tuple_result?;
+                assert!(!tuple_ref.metadata().is_deleted());
+                all_tuples.push(tuple_ref.data().to_vec());
+            }
+        }
+
+        assert_eq!(all_tuples.len(), num_tuples as usize);
+        for (expected, actual) in inserted_data.into_iter().zip(all_tuples.into_iter()) {
+            assert_eq!(expected, actual);
+        }
 
         Ok(())
     }
