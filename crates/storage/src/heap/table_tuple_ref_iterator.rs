@@ -44,7 +44,6 @@ mod tests {
         page::table_page::TablePageRef,
         replacer::lru_replacer::LruReplacer,
         tuple::{Tuple, TupleRef},
-        typedef::PageId,
         Result,
     };
 
