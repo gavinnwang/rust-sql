@@ -4,11 +4,6 @@ pub struct Tuple {
     data: Vec<u8>,
 }
 
-pub struct TupleRef<'a> {
-    pub metadata: &'a TupleMetadata,
-    pub data: &'a [u8],
-}
-
 impl Tuple {
     pub(crate) fn new(data: Vec<u8>) -> Tuple {
         Tuple { data }
@@ -24,5 +19,20 @@ impl Tuple {
 
     pub(crate) fn data_mut(&mut self) -> &mut Vec<u8> {
         &mut self.data
+    }
+}
+
+pub struct TupleRef<'a> {
+    metadata: &'a TupleMetadata,
+    data: &'a [u8],
+}
+
+impl<'a> TupleRef<'a> {
+    pub(crate) fn data(&self) -> &[u8] {
+        self.data
+    }
+
+    pub(crate) fn metadata(&self) -> &TupleMetadata {
+        self.metadata
     }
 }
