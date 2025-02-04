@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 pub(crate) mod buffer_pool;
 pub(crate) mod disk;
 pub(crate) mod frame;

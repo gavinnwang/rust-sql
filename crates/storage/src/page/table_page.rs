@@ -104,11 +104,6 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         let slot_array = self.slot_array();
         let tuple_info = slot_array[rid.slot_id() as usize];
 
-        // // If the tuple is deleted, return an error
-        // if tuple_info.metadata.is_deleted() {
-        //     return Result::from(Error::InvalidInput(rid.to_string()));
-        // }
-
         let data_offset = tuple_info.offset as usize;
         let data_size = tuple_info.size_bytes as usize;
         let page_data = self.page_frame_handle.as_ref().data();
