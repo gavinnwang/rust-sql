@@ -8,4 +8,4 @@ pub(crate) mod record_id;
 pub(crate) mod replacer;
 pub(crate) mod tuple;
 pub(crate) mod typedef;
-pub(crate) type Result<T> = std::result::Result<T, rustdb_error::Error>;
+pub type Result<T> = std::result::Result<T, rustdb_error::Error>;

@@ -53,7 +53,7 @@ impl TupleMetadata {
 }
 
 /// Generic struct for both mutable and immutable table pages.
-pub(crate) struct TablePage<T> {
+pub struct TablePage<T> {
     page_frame_handle: T,
 }
 
@@ -237,9 +237,9 @@ impl<T: AsMut<PageFrame> + AsRef<PageFrame>> TablePage<T> {
 }
 
 /// Type alias for immutable TablePage
-pub(crate) type TablePageRef<'a> = TablePage<PageFrameRefHandle<'a>>;
+pub type TablePageRef<'a> = TablePage<PageFrameRefHandle<'a>>;
 /// Type alias for mutable TablePage
-pub(crate) type TablePageMut<'a> = TablePage<PageFrameMutHandle<'a>>;
+pub type TablePageMut<'a> = TablePage<PageFrameMutHandle<'a>>;
 
 impl<'a> From<PageFrameRefHandle<'a>> for TablePageRef<'a> {
     fn from(page_frame_handle: PageFrameRefHandle<'a>) -> Self {

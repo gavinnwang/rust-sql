@@ -3,7 +3,7 @@ use crate::frame::PageFrame;
 use std::sync::{Arc, RwLock};
 
 /// Immutable page handle for read access.
-pub(crate) struct PageFrameRefHandle<'a> {
+pub struct PageFrameRefHandle<'a> {
     bpm: Arc<RwLock<BufferPoolManager>>,
     page_frame: &'a PageFrame,
 }
@@ -28,7 +28,7 @@ impl<'a> Drop for PageFrameRefHandle<'a> {
 }
 
 /// Mutable page handle for write access.
-pub(crate) struct PageFrameMutHandle<'a> {
+pub struct PageFrameMutHandle<'a> {
     bpm: Arc<RwLock<BufferPoolManager>>,
     page_frame: &'a mut PageFrame,
 }
