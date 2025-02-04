@@ -1,7 +1,7 @@
 use crate::frame_handle::{PageFrameMutHandle, PageFrameRefHandle};
 use crate::page::PAGE_SIZE;
 use crate::record_id::RecordId;
-use crate::tuple::Tuple;
+use crate::tuple::{Tuple, TupleRef};
 use crate::Result;
 use crate::{frame::PageFrame, typedef::PageId};
 use bytemuck::{Pod, Zeroable};
@@ -23,6 +23,16 @@ pub(crate) struct TupleInfo {
     offset: u16,
     size_bytes: u16,
     metadata: TupleMetadata,
+}
+
+impl TupleInfo {
+    pub(crate) fn offset(&self) -> u16 {
+        self.offset
+    }
+
+    pub(crate) fn size_bytes(&self) -> u16 {
+        self.size_bytes
+    }
 }
 
 pub(crate) const TABLE_PAGE_HEADER_SIZE: usize = mem::size_of::<TablePageHeader>();
@@ -141,6 +151,26 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         } else {
             Ok(())
         }
+    }
+
+    pub(crate) fn get_tuple_ref(&self, rid: &crate::record_id::RecordId) -> Result<TupleRef<'_>> {
+        self.validate_record_id(rid)?;
+        let slot_array = self.slot_array();
+
+        let tuple_info = &slot_array[rid.slot_id() as usize];
+
+        let offset = tuple_info.offset as usize;
+        let size = tuple_info.size_bytes as usize;
+        let page_data = self.page_frame_handle.as_ref().data();
+
+        if offset + size > page_data.len() {
+            return Err(Error::OutOfBounds);
+        }
+
+        Ok(TupleRef {
+            metadata: &tuple_info.metadata,
+            data: &page_data[offset..offset + size],
+        })
     }
 }
 

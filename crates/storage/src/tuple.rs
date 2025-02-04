@@ -1,5 +1,12 @@
+use crate::page::table_page::TupleMetadata;
+
 pub struct Tuple {
     data: Vec<u8>,
+}
+
+pub struct TupleRef<'a> {
+    pub metadata: &'a TupleMetadata,
+    pub data: &'a [u8],
 }
 
 impl Tuple {
