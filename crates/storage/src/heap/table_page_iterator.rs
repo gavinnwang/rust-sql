@@ -67,7 +67,7 @@ mod tests {
         heap::table_heap::TableHeap, replacer::lru_replacer::LruReplacer, tuple::Tuple, Result,
     };
 
-    use super::TablePageIterator;
+    use super::{PageId, TablePageIterator};
 
     #[test]
     fn test_table_page_iterator() -> Result<()> {
@@ -76,19 +76,29 @@ mod tests {
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
         let mut table_heap = TableHeap::new(bpm.clone());
-        let tuple1 = Tuple::new(vec![1, 2, 3]);
-        let tuple2 = Tuple::new(vec![4, 5, 6]);
-        table_heap.insert_tuple(&tuple1)?;
-        table_heap.insert_tuple(&tuple2)?;
+
+        let pages_wanted = 10;
+        let mut first_page_id: Option<PageId> = None;
+
+        loop {
+            let tuple = Tuple::new(vec![1, 2, 3]);
+            let rid = table_heap.insert_tuple(&tuple)?;
+            if first_page_id.is_none() {
+                first_page_id = Some(rid.page_id());
+            }
+            if rid.page_id() >= pages_wanted {
+                break;
+            }
+        }
 
         let mut iter = TablePageIterator::new(bpm.clone(), table_heap.first_page_id());
 
-        let mut page_count = 0;
-        while let Some(page_result) = iter.next() {
-            page_result?;
-            page_count += 1;
+        let mut current_page_id = first_page_id.unwrap();
+        while let Some(page) = iter.next() {
+            assert_eq!(current_page_id, page?.page_id());
+            current_page_id += 1;
         }
-        assert!(page_count >= 1);
+
         Ok(())
     }
 }
