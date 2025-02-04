@@ -37,7 +37,7 @@ impl<'a> Iterator for TablePageIterator<'a> {
 
         let (next_page_id, table_page) = {
             let page_handle_res =
-                BufferPoolManager::fetch_page_handle(self.bpm.clone(), self.current_page_id);
+                BufferPoolManager::fetch_page_handle(self.bpm.clone(), &self.current_page_id);
             let page_handle = match page_handle_res {
                 Ok(handle) => handle,
                 Err(_) => {

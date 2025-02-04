@@ -23,7 +23,7 @@ impl<'a> Drop for PageFrameRefHandle<'a> {
         self.bpm
             .write()
             .unwrap()
-            .unpin_page(self.page_frame.page_id(), false);
+            .unpin_page(&self.page_frame.page_id(), false);
     }
 }
 
@@ -48,7 +48,7 @@ impl<'a> Drop for PageFrameMutHandle<'a> {
         self.bpm
             .write()
             .unwrap()
-            .unpin_page(self.page_frame.page_id(), true);
+            .unpin_page(&self.page_frame.page_id(), true);
     }
 }
 

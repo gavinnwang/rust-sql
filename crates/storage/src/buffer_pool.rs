@@ -55,7 +55,7 @@ impl BufferPoolManager {
         // flush the evicted page to disk if it is dirty
         if frame.is_dirty() {
             let mut disk = self.disk_manager.write().unwrap();
-            disk.write(frame.page_id(), frame.data()).unwrap();
+            disk.write(&frame.page_id(), frame.data()).unwrap();
         }
 
         // if a frame is evicted to make space, remove the stale record in the page table
@@ -89,8 +89,8 @@ impl BufferPoolManager {
         Ok(page_frame)
     }
 
-    fn fetch_page_mut(&mut self, page_id: PageId) -> Result<&mut PageFrame> {
-        if let Some(&frame_id) = self.page_table.get(&page_id) {
+    fn fetch_page_mut(&mut self, page_id: &PageId) -> Result<&mut PageFrame> {
+        if let Some(&frame_id) = self.page_table.get(page_id) {
             let frame = &mut self.frames[frame_id];
             frame.increment_pin_count();
             self.replacer.record_access(frame_id);
@@ -100,10 +100,10 @@ impl BufferPoolManager {
 
         let frame_id = self.get_free_frame()?;
 
-        self.page_table.insert(page_id, frame_id);
+        self.page_table.insert(*page_id, frame_id);
 
         let page_frame = &mut self.frames[frame_id];
-        page_frame.set_page_id(page_id);
+        page_frame.set_page_id(*page_id);
         page_frame.set_dirty(false);
         page_frame.set_pin_count(1);
 
@@ -121,12 +121,12 @@ impl BufferPoolManager {
         Ok(page_frame)
     }
 
-    fn fetch_page(&mut self, page_id: PageId) -> Result<&PageFrame> {
+    fn fetch_page(&mut self, page_id: &PageId) -> Result<&PageFrame> {
         self.fetch_page_mut(page_id).map(|page| &*page)
     }
 
-    pub(crate) fn unpin_page(&mut self, page_id: PageId, is_dirty: bool) {
-        if let Some(&frame_id) = self.page_table.get(&page_id) {
+    pub(crate) fn unpin_page(&mut self, page_id: &PageId, is_dirty: bool) {
+        if let Some(&frame_id) = self.page_table.get(page_id) {
             let page_frame = &mut self.frames[frame_id];
             if is_dirty {
                 page_frame.set_dirty(true);
@@ -139,7 +139,7 @@ impl BufferPoolManager {
     }
 
     /// deletes page from both the bpm and disk
-    fn delete_page(&mut self, page_id: PageId) -> Result<()> {
+    fn delete_page(&mut self, page_id: &PageId) -> Result<()> {
         // If the page is not in the buffer pool, return true (nothing to delete)
         if !self.page_table.contains_key(&page_id) {
             return Ok(());
@@ -194,7 +194,7 @@ impl BufferPoolManager {
 
     pub(crate) fn fetch_page_handle(
         bpm: Arc<RwLock<BufferPoolManager>>,
-        page_id: PageId,
+        page_id: &PageId,
     ) -> Result<PageFrameRefHandle<'static>> {
         let mut bpm_guard = bpm.write().unwrap();
 
@@ -206,7 +206,7 @@ impl BufferPoolManager {
 
     pub(crate) fn fetch_page_mut_handle(
         bpm: Arc<RwLock<BufferPoolManager>>,
-        page_id: PageId,
+        page_id: &PageId,
     ) -> Result<PageFrameMutHandle<'static>> {
         let mut bpm_guard = bpm.write().unwrap();
 
