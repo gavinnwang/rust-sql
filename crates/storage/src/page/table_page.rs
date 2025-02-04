@@ -167,10 +167,10 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
             return Err(Error::OutOfBounds);
         }
 
-        Ok(TupleRef {
-            metadata: &tuple_info.metadata,
-            data: &page_data[offset..offset + size],
-        })
+        Ok(TupleRef::new(
+            &page_data[offset..offset + size],
+            &tuple_info.metadata,
+        ))
     }
 }
 

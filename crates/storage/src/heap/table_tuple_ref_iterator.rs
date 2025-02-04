@@ -52,15 +52,12 @@ mod tests {
 
     #[test]
     fn test_table_tuple_iterator() -> Result<()> {
-        // Create a disk manager and a buffer pool manager with a small pool.
         let disk = Arc::new(RwLock::new(DiskManager::new("test.db").unwrap()));
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
-        // Create a table heap using the buffer pool manager.
         let mut table_heap = TableHeap::new(bpm.clone());
 
-        // Prepare three tuples with distinct data.
         let t1_data = vec![10, 20, 30];
         let t2_data = vec![40, 50, 60];
         let t3_data = vec![70, 80, 90];
@@ -68,34 +65,25 @@ mod tests {
         let tuple2 = Tuple::new(t2_data.clone());
         let tuple3 = Tuple::new(t3_data.clone());
 
-        // Insert the tuples into the table heap.
         let _rid1 = table_heap.insert_tuple(&tuple1)?;
         let _rid2 = table_heap.insert_tuple(&tuple2)?;
         let _rid3 = table_heap.insert_tuple(&tuple3)?;
 
-        // Obtain the first page ID from the table heap.
         let first_page_id = table_heap.first_page_id();
 
-        // Fetch a page handle from the BufferPoolManager and convert it to a TablePageRef.
         let frame_handle = BufferPoolManager::fetch_page_handle(bpm.clone(), first_page_id)?;
         let table_page = TablePageRef::from(frame_handle);
 
-        // Create the tuple iterator on this page.
         let mut iter = TableTupleIterator::new(&table_page);
 
-        // Iterate through the tuples and collect their data.
         let mut collected: Vec<Vec<u8>> = Vec::new();
         while let Some(tuple_result) = iter.next() {
             let tuple_ref: TupleRef = tuple_result?;
-            // You can also check properties of the metadata; for example:
-            assert!(!tuple_ref.metadata.is_deleted());
-            // Copy the zero-copy slice into a Vec for easy comparison.
-            collected.push(tuple_ref.data.to_vec());
+            assert!(!tuple_ref.metadata().is_deleted());
+            collected.push(tuple_ref.data().to_vec());
         }
 
-        // Ensure that we have exactly three tuples.
         assert_eq!(collected.len(), 3);
-        // Verify that the collected tuple data matches the inserted tuples.
         assert_eq!(collected[0], t1_data);
         assert_eq!(collected[1], t2_data);
         assert_eq!(collected[2], t3_data);

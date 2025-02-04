@@ -28,6 +28,9 @@ pub struct TupleRef<'a> {
 }
 
 impl<'a> TupleRef<'a> {
+    pub(crate) fn new(data: &'a [u8], metadata: &'a TupleMetadata) -> TupleRef<'a> {
+        TupleRef { data, metadata }
+    }
     pub(crate) fn data(&self) -> &[u8] {
         self.data
     }
