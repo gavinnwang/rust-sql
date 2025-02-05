@@ -235,7 +235,9 @@ mod tests {
         {
             let mut handles = vec![];
 
-            for i in 0..5 {
+            // fill the buffer pool with newly created pages
+            // these pages should all be pinned
+            for i in 0..pool_size {
                 let page_handle = BufferPoolManager::create_page_handle(&bpm);
                 assert!(page_handle.is_ok());
                 handles.push(page_handle);

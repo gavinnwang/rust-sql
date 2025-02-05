@@ -14,14 +14,14 @@ use super::table_heap::TableHeap;
 /// This iterator borrows a TableHeap (to obtain the starting page ID and BPM)
 /// and then walks the page chain (via each page’s header) while iterating over the
 /// tuple slots. Deleted tuples are skipped.
-pub struct TableIterator<'a> {
+pub struct TableTupleIterator<'a> {
     bpm: Arc<RwLock<BufferPoolManager>>,
     table_heap: &'a TableHeap,
     current_page_id: PageId,
     current_slot: u16,
 }
 
-impl<'a> TableIterator<'a> {
+impl<'a> TableTupleIterator<'a> {
     /// Creates a new `TableIterator` using the table heap’s starting page.
     pub fn new(bpm: Arc<RwLock<BufferPoolManager>>, table_heap: &'a TableHeap) -> Self {
         Self {
@@ -33,7 +33,7 @@ impl<'a> TableIterator<'a> {
     }
 }
 
-impl<'a> Iterator for TableIterator<'a> {
+impl<'a> Iterator for TableTupleIterator<'a> {
     // Each item is a Result wrapping a (RecordId, Tuple) pair.
     type Item = Result<(RecordId, Tuple)>;
 
@@ -123,7 +123,7 @@ mod tests {
         tuple::Tuple, Result,
     };
 
-    use super::TableIterator;
+    use super::TableTupleIterator;
 
     /// Test that the iterator correctly visits all non-deleted tuples in the table heap.
     #[test]
@@ -149,7 +149,7 @@ mod tests {
 
         table_heap.delete_tuple(&rid3).unwrap();
 
-        let iter = TableIterator::new(bpm.clone(), &table_heap);
+        let iter = TableTupleIterator::new(bpm.clone(), &table_heap);
 
         // Collect all tuples from the iterator.
         let tuples: Vec<_> = iter.collect::<Result<Vec<(RecordId, Tuple)>>>()?;
