@@ -297,7 +297,7 @@ mod tests {
 
         let mut page_id = INVALID_PAGE_ID;
         {
-            let frame_handle = BufferPoolManager::create_page_handle(bpm.clone()).unwrap();
+            let frame_handle = BufferPoolManager::create_page_handle(&bpm).unwrap();
             let mut table_page = TablePageMut::from(frame_handle);
 
             table_page.init_header(2);
@@ -334,7 +334,7 @@ mod tests {
             assert_eq!(slots[1].metadata.is_deleted(), true);
         }
 
-        let frame_handle_1 = BufferPoolManager::fetch_page_handle(bpm.clone(), &page_id).unwrap();
+        let frame_handle_1 = BufferPoolManager::fetch_page_handle(&bpm, page_id).unwrap();
 
         let table_page1 = TablePageRef::from(frame_handle_1);
 
@@ -363,7 +363,7 @@ mod tests {
 
         let tuple_data = vec![1, 2, 3, 1, 2, 3, 4, 5, 6, 7, 8];
         {
-            let frame_handle = BufferPoolManager::create_page_handle(bpm.clone()).unwrap();
+            let frame_handle = BufferPoolManager::create_page_handle(&bpm).unwrap();
             let mut table_page = TablePageMut::from(frame_handle);
 
             page_id = table_page.page_id();
@@ -387,7 +387,7 @@ mod tests {
             assert_eq!(retrieved_meta.is_deleted(), metadata.is_deleted());
             assert_eq!(retrieved_tuple.data(), &tuple_data);
         }
-        let frame_handle_1 = BufferPoolManager::fetch_page_handle(bpm.clone(), &page_id).unwrap();
+        let frame_handle_1 = BufferPoolManager::fetch_page_handle(&bpm, page_id).unwrap();
 
         let table_page1 = TablePageRef::from(frame_handle_1);
         // Retrieve the tuple

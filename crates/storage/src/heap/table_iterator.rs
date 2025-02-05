@@ -47,7 +47,7 @@ impl<'a> Iterator for TableIterator<'a> {
             // Fetch header info from the current page.
             let (tuple_count, next_page_id) = {
                 let page_handle_res =
-                    BufferPoolManager::fetch_page_handle(self.bpm.clone(), &self.current_page_id);
+                    BufferPoolManager::fetch_page_handle(&self.bpm, self.current_page_id);
                 let page_handle = match page_handle_res {
                     Ok(handle) => handle,
                     _ => {
@@ -78,7 +78,7 @@ impl<'a> Iterator for TableIterator<'a> {
             // Fetch the tuple from the current page.
             let tuple_result = {
                 let page_handle_res =
-                    BufferPoolManager::fetch_page_handle(self.bpm.clone(), &self.current_page_id);
+                    BufferPoolManager::fetch_page_handle(&self.bpm, self.current_page_id);
                 let page_handle = match page_handle_res {
                     Ok(handle) => handle,
                     _ => {

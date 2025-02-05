@@ -70,7 +70,7 @@ mod tests {
 
         let first_page_id = table_heap.first_page_id();
 
-        let frame_handle = BufferPoolManager::fetch_page_handle(bpm.clone(), &first_page_id)?;
+        let frame_handle = BufferPoolManager::fetch_page_handle(&bpm, first_page_id)?;
         let table_page = TablePageRef::from(frame_handle);
 
         let mut iter = TableTupleIterator::new(&table_page);
@@ -109,7 +109,7 @@ mod tests {
             }
         }
 
-        let mut page_iter = TablePageIterator::new(bpm.clone(), table_heap.first_page_id());
+        let mut page_iter = TablePageIterator::new(&bpm, table_heap.first_page_id());
         let mut all_tuples: Vec<Vec<u8>> = Vec::new();
 
         while let Some(page_result) = page_iter.next() {

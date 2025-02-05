@@ -182,38 +182,35 @@ impl BufferPoolManager {
     }
 
     pub(crate) fn create_page_handle(
-        bpm: Arc<RwLock<BufferPoolManager>>,
-    ) -> Result<PageFrameMutHandle<'static>> {
+        bpm: &Arc<RwLock<BufferPoolManager>>,
+    ) -> Result<PageFrameMutHandle> {
         let mut bpm_guard = bpm.write().unwrap();
-
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).create_page()? };
 
-        Ok(PageFrameMutHandle::new(bpm.clone(), page_frame))
+        Ok(PageFrameMutHandle::new(Arc::clone(bpm), page_frame))
     }
 
     pub(crate) fn fetch_page_handle(
-        bpm: Arc<RwLock<BufferPoolManager>>,
-        page_id: &PageId,
-    ) -> Result<PageFrameRefHandle<'static>> {
+        bpm: &Arc<RwLock<BufferPoolManager>>,
+        page_id: PageId,
+    ) -> Result<PageFrameRefHandle> {
         let mut bpm_guard = bpm.write().unwrap();
-
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
-        let page_frame = unsafe { (*bpm_ptr).fetch_page(page_id)? };
+        let page_frame = unsafe { (*bpm_ptr).fetch_page(&page_id)? };
 
-        Ok(PageFrameRefHandle::new(bpm.clone(), page_frame))
+        Ok(PageFrameRefHandle::new(Arc::clone(bpm), page_frame))
     }
 
     pub(crate) fn fetch_page_mut_handle(
-        bpm: Arc<RwLock<BufferPoolManager>>,
-        page_id: &PageId,
-    ) -> Result<PageFrameMutHandle<'static>> {
+        bpm: &Arc<RwLock<BufferPoolManager>>,
+        page_id: PageId,
+    ) -> Result<PageFrameMutHandle> {
         let mut bpm_guard = bpm.write().unwrap();
-
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
-        let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(page_id)? };
+        let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(&page_id)? };
 
-        Ok(PageFrameMutHandle::new(bpm.clone(), page_frame))
+        Ok(PageFrameMutHandle::new(Arc::clone(bpm), page_frame))
     }
 }
 
@@ -239,8 +236,7 @@ mod tests {
             let mut handles = vec![];
 
             for i in 0..5 {
-                let bpm_clone = bpm.clone();
-                let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
+                let page_handle = BufferPoolManager::create_page_handle(&bpm);
                 assert!(page_handle.is_ok());
                 handles.push(page_handle);
                 assert_eq!(pool_size - i - 1, bpm.read().unwrap().free_frame_count());
@@ -250,16 +246,14 @@ mod tests {
 
             {
                 // Create a new page when buffer pool has no free frame, should return None
-                let bpm_clone = bpm.clone();
-                let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
+                let page_handle = BufferPoolManager::create_page_handle(&bpm);
                 assert!(page_handle.is_err());
             }
 
             handles.pop();
             assert_eq!(1, bpm.read().unwrap().free_frame_count());
 
-            let bpm_clone = bpm.clone();
-            let page_handle = BufferPoolManager::create_page_handle(bpm_clone);
+            let page_handle = BufferPoolManager::create_page_handle(&bpm);
             assert!(page_handle.is_ok());
         }
         assert_eq!(5, bpm.read().unwrap().free_frame_count());

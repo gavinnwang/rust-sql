@@ -1,28 +1,23 @@
-use std::marker::PhantomData;
 use std::sync::{Arc, RwLock};
 
-use crate::page::INVALID_PAGE_ID;
 use crate::{
-    buffer_pool::BufferPoolManager, page::table_page::TablePageRef, typedef::PageId, Result,
+    buffer_pool::BufferPoolManager,
+    page::{table_page::TablePageRef, INVALID_PAGE_ID},
+    typedef::PageId,
+    Result,
 };
 use rustdb_error::Error;
 
-/// An iterator over all pages in a table heap.
-///
-/// This iterator walks the page chain (via each page’s header) while iterating over the pages.
-/// The lifetime `'a` is tied to the lifetime of the data in the buffer pool.
 pub struct TablePageIterator<'a> {
-    bpm: Arc<RwLock<BufferPoolManager>>,
+    bpm: &'a Arc<RwLock<BufferPoolManager>>,
     current_page_id: PageId,
-    _marker: PhantomData<&'a BufferPoolManager>,
 }
 
 impl<'a> TablePageIterator<'a> {
-    pub fn new(bpm: Arc<RwLock<BufferPoolManager>>, first_page_id: PageId) -> Self {
-        Self {
+    pub fn new(bpm: &'a Arc<RwLock<BufferPoolManager>>, first_page_id: PageId) -> Self {
+        TablePageIterator {
             bpm,
             current_page_id: first_page_id,
-            _marker: PhantomData,
         }
     }
 }
@@ -35,25 +30,21 @@ impl<'a> Iterator for TablePageIterator<'a> {
             return None;
         }
 
-        let (next_page_id, table_page) = {
-            let page_handle_res =
-                BufferPoolManager::fetch_page_handle(self.bpm.clone(), &self.current_page_id);
-            let page_handle = match page_handle_res {
-                Ok(handle) => handle,
-                Err(_) => {
-                    return Some(Err(Error::IO(format!(
-                        "Failed to fetch page {}",
-                        self.current_page_id
-                    ))))
-                }
-            };
-
-            // Create an immutable TablePageRef from the page handle.
-            let table_page = TablePageRef::from(page_handle);
-            (table_page.next_page_id(), table_page)
+        let new_handle = match BufferPoolManager::fetch_page_handle(&self.bpm, self.current_page_id)
+        {
+            Ok(handle) => handle,
+            Err(e) => {
+                return Some(Err(Error::IO(format!(
+                    "Failed to fetch page {}: {}",
+                    self.current_page_id, e
+                ))));
+            }
         };
 
-        self.current_page_id = next_page_id;
+        let table_page = TablePageRef::from(new_handle);
+
+        self.current_page_id = table_page.next_page_id();
+
         Some(Ok(table_page))
     }
 }
@@ -91,7 +82,7 @@ mod tests {
             }
         }
 
-        let mut iter = TablePageIterator::new(bpm.clone(), table_heap.first_page_id());
+        let mut iter = TablePageIterator::new(&bpm, table_heap.first_page_id());
 
         let mut current_page_id = first_page_id.unwrap();
         while let Some(page) = iter.next() {

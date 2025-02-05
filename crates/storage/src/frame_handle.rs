@@ -83,7 +83,7 @@ mod tests {
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
 
         {
-            let handle = BufferPoolManager::create_page_handle(bpm.clone());
+            let handle = BufferPoolManager::create_page_handle(&bpm);
             let cnt = handle.unwrap().page_frame.pin_count();
             assert_eq!(1, cnt);
         }
