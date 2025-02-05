@@ -40,7 +40,7 @@ pub(crate) const TUPLE_INFO_SIZE: usize = mem::size_of::<TupleInfo>();
 
 #[repr(C)]
 #[derive(Pod, Zeroable, Copy, Clone)]
-pub(crate) struct TupleMetadata {
+pub struct TupleMetadata {
     is_deleted: u8,
     _padding: [u8; 1],
 }
@@ -148,7 +148,7 @@ impl<T: AsRef<PageFrame>> TablePage<T> {
         }
     }
 
-    pub(crate) fn get_tuple_ref(&self, rid: &crate::record_id::RecordId) -> Result<TupleRef<'_>> {
+    pub(crate) fn get_tuple_ref<'a>(&'a self, rid: &RecordId) -> Result<TupleRef<'a>> {
         self.validate_record_id(rid)?;
         let slot_array = self.slot_array();
 

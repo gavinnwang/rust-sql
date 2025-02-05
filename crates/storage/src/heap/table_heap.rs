@@ -12,6 +12,8 @@ use crate::{
     Result,
 };
 
+use super::table_page_iterator::TablePageIterator;
+
 pub struct TableHeap {
     page_cnt: u32,
     bpm: Arc<RwLock<BufferPoolManager>>,
@@ -101,6 +103,9 @@ impl TableHeap {
             }
             Err(e) => Err(e),
         }
+    }
+    pub fn page_iter(&self) -> TablePageIterator {
+        TablePageIterator::new(&self.bpm, self.first_page_id())
     }
 }
 

@@ -1,14 +1,14 @@
-use crate::{record_id::RecordId, tuple::TupleRef, Result};
+use crate::{page::table_page::TablePageRef, record_id::RecordId, tuple::TupleRef, Result};
 
 /// An iterator over the tuples in a table page, returning zero-copy TupleRef values.
 pub struct TableTupleIterator<'a> {
     /// A reference to the table page from which we are iterating.
-    page: &'a crate::page::table_page::TablePageRef<'a>,
+    page: &'a TablePageRef<'a>,
     current_slot: u16,
 }
 
 impl<'a> TableTupleIterator<'a> {
-    pub fn new(page: &'a crate::page::table_page::TablePageRef<'a>) -> Self {
+    pub fn new(page: &'a TablePageRef<'a>) -> Self {
         Self {
             page,
             current_slot: 0,
@@ -109,7 +109,7 @@ mod tests {
             }
         }
 
-        let mut page_iter = TablePageIterator::new(&bpm, table_heap.first_page_id());
+        let mut page_iter = table_heap.page_iter();
         let mut all_tuples: Vec<Vec<u8>> = Vec::new();
 
         while let Some(page_result) = page_iter.next() {
