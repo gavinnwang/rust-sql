@@ -27,14 +27,13 @@ impl<'a> TableTupleIterator<'a> {
         Self {
             bpm,
             table_heap,
-            current_page_id: table_heap.first_page_id(), // assume a getter exists
+            current_page_id: table_heap.first_page_id(),
             current_slot: 0,
         }
     }
 }
 
 impl<'a> Iterator for TableTupleIterator<'a> {
-    // Each item is a Result wrapping a (RecordId, Tuple) pair.
     type Item = Result<(RecordId, Tuple)>;
 
     fn next(&mut self) -> Option<Self::Item> {
