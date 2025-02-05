@@ -161,4 +161,49 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn test_table_tuple_iterator_multiple_pages() -> Result<()> {
+        let disk = Arc::new(RwLock::new(DiskManager::new("test_multiple_pages.db")?));
+        let replacer = Box::new(LruReplacer::new());
+        let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
+        let mut table_heap = TableHeap::new(bpm.clone());
+
+        let pages_wanted = 10;
+        let mut inserted = 0;
+        let mut inserted_data: Vec<Vec<u8>> = Vec::new();
+        let mut inserted_rid: Vec<RecordId> = Vec::new();
+        loop {
+            let tuple = Tuple::new(vec![
+                (inserted % 256) as u8,
+                ((inserted + 1) % 256) as u8,
+                ((inserted + 2) % 256) as u8,
+            ]);
+            let rid = table_heap.insert_tuple(&tuple)?;
+            inserted += 1;
+            inserted_data.push(tuple.data().to_vec());
+            inserted_rid.push(rid.clone());
+            if rid.page_id() >= pages_wanted {
+                break;
+            }
+        }
+
+        let iter = TableTupleIterator::new(bpm.clone(), &table_heap);
+
+        let all_tuples: Vec<(RecordId, Tuple)> = iter.collect::<Result<Vec<_>>>()?;
+
+        let num_tuples = inserted_data.len();
+
+        assert_eq!(all_tuples.len(), num_tuples as usize);
+        for ((expected_data, expected_rid), (actual_rid, actual_tuple)) in inserted_data
+            .into_iter()
+            .zip(inserted_rid.into_iter())
+            .zip(all_tuples.into_iter())
+        {
+            assert_eq!(expected_data, actual_tuple.data().to_vec());
+            assert_eq!(expected_rid, actual_rid);
+        }
+
+        Ok(())
+    }
 }

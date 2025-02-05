@@ -1,5 +1,6 @@
 use crate::page::table_page::TupleMetadata;
 
+#[derive(Debug)]
 pub struct Tuple {
     data: Vec<u8>,
 }
