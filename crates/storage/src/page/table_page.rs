@@ -334,7 +334,7 @@ mod tests {
             assert_eq!(slots[1].metadata.is_deleted(), true);
         }
 
-        let frame_handle_1 = BufferPoolManager::fetch_page_handle(&bpm, page_id).unwrap();
+        let frame_handle_1 = BufferPoolManager::fetch_page_handle(&bpm, &page_id).unwrap();
 
         let table_page1 = TablePageRef::from(frame_handle_1);
 
@@ -387,7 +387,7 @@ mod tests {
             assert_eq!(retrieved_meta.is_deleted(), metadata.is_deleted());
             assert_eq!(retrieved_tuple.data(), &tuple_data);
         }
-        let frame_handle_1 = BufferPoolManager::fetch_page_handle(&bpm, page_id).unwrap();
+        let frame_handle_1 = BufferPoolManager::fetch_page_handle(&bpm, &page_id).unwrap();
 
         let table_page1 = TablePageRef::from(frame_handle_1);
         // Retrieve the tuple

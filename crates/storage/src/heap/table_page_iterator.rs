@@ -30,16 +30,16 @@ impl<'a> Iterator for TablePageIterator<'a> {
             return None;
         }
 
-        let new_handle = match BufferPoolManager::fetch_page_handle(&self.bpm, self.current_page_id)
-        {
-            Ok(handle) => handle,
-            Err(e) => {
-                return Some(Err(Error::IO(format!(
-                    "Failed to fetch page {}: {}",
-                    self.current_page_id, e
-                ))));
-            }
-        };
+        let new_handle =
+            match BufferPoolManager::fetch_page_handle(&self.bpm, &self.current_page_id) {
+                Ok(handle) => handle,
+                Err(e) => {
+                    return Some(Err(Error::IO(format!(
+                        "Failed to fetch page {}: {}",
+                        self.current_page_id, e
+                    ))));
+                }
+            };
 
         let table_page = TablePageRef::from(new_handle);
 

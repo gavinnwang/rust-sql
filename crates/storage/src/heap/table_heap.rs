@@ -46,7 +46,7 @@ impl TableHeap {
     /// Retrieve a tuple given its record id.
     pub fn get_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
         // Fetch an immutable handle to the page where the tuple should reside.
-        let page_handle = BufferPoolManager::fetch_page_handle(&self.bpm, rid.page_id())?;
+        let page_handle = BufferPoolManager::fetch_page_handle(&self.bpm, &rid.page_id())?;
         let table_page_ref = TablePageRef::from(page_handle);
         table_page_ref.get_tuple(rid)
     }
@@ -54,7 +54,8 @@ impl TableHeap {
     /// Delete a tuple given its record id and return the deleted tuple data and tuple meatdata.
     pub fn delete_tuple(&self, rid: &RecordId) -> Result<(TupleMetadata, Tuple)> {
         let old_data = self.get_tuple(rid)?;
-        let page_handle = BufferPoolManager::fetch_page_mut_handle(&self.bpm, rid.page_id())?;
+        let page_id = rid.page_id();
+        let page_handle = BufferPoolManager::fetch_page_mut_handle(&self.bpm, &page_id)?;
         let mut table_page_mut = TablePageMut::from(page_handle);
 
         let mut deleted_metadata = old_data.0.clone();
@@ -70,7 +71,8 @@ impl TableHeap {
         let metadata = TupleMetadata::new(false);
 
         // Try to fetch a mutable handle for the current last page.
-        let page_handle = BufferPoolManager::fetch_page_mut_handle(&self.bpm, self.last_page_id)?;
+        let last_page = self.last_page_id;
+        let page_handle = BufferPoolManager::fetch_page_mut_handle(&self.bpm, &last_page)?;
         let mut table_page = TablePageMut::from(page_handle);
 
         // Try inserting the tuple into the current page.
