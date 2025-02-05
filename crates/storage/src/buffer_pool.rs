@@ -188,7 +188,7 @@ impl BufferPoolManager {
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).create_page()? };
 
-        Ok(PageFrameMutHandle::new(Arc::clone(bpm), page_frame))
+        Ok(PageFrameMutHandle::new(&bpm, page_frame))
     }
 
     pub(crate) fn fetch_page_handle(
@@ -199,7 +199,7 @@ impl BufferPoolManager {
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).fetch_page(&page_id)? };
 
-        Ok(PageFrameRefHandle::new(Arc::clone(bpm), page_frame))
+        Ok(PageFrameRefHandle::new(&bpm, page_frame))
     }
 
     pub(crate) fn fetch_page_mut_handle(
@@ -210,7 +210,7 @@ impl BufferPoolManager {
         let bpm_ptr = &mut *bpm_guard as *mut BufferPoolManager;
         let page_frame = unsafe { (*bpm_ptr).fetch_page_mut(&page_id)? };
 
-        Ok(PageFrameMutHandle::new(Arc::clone(bpm), page_frame))
+        Ok(PageFrameMutHandle::new(&bpm, page_frame))
     }
 }
 

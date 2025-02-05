@@ -4,12 +4,12 @@ use std::sync::{Arc, RwLock};
 
 /// Immutable page handle for read access.
 pub struct PageFrameRefHandle<'a> {
-    bpm: Arc<RwLock<BufferPoolManager>>,
+    bpm: &'a Arc<RwLock<BufferPoolManager>>,
     page_frame: &'a PageFrame,
 }
 
 impl<'a> PageFrameRefHandle<'a> {
-    pub(crate) fn new(bpm: Arc<RwLock<BufferPoolManager>>, page_frame: &'a PageFrame) -> Self {
+    pub(crate) fn new(bpm: &'a Arc<RwLock<BufferPoolManager>>, page_frame: &'a PageFrame) -> Self {
         PageFrameRefHandle { bpm, page_frame }
     }
 
@@ -29,12 +29,15 @@ impl<'a> Drop for PageFrameRefHandle<'a> {
 
 /// Mutable page handle for write access.
 pub struct PageFrameMutHandle<'a> {
-    bpm: Arc<RwLock<BufferPoolManager>>,
+    bpm: &'a Arc<RwLock<BufferPoolManager>>,
     page_frame: &'a mut PageFrame,
 }
 
 impl<'a> PageFrameMutHandle<'a> {
-    pub(crate) fn new(bpm: Arc<RwLock<BufferPoolManager>>, page_frame: &'a mut PageFrame) -> Self {
+    pub(crate) fn new(
+        bpm: &'a Arc<RwLock<BufferPoolManager>>,
+        page_frame: &'a mut PageFrame,
+    ) -> Self {
         PageFrameMutHandle { bpm, page_frame }
     }
 
