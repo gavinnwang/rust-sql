@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn test_table_tuple_iterator_multiple_pages() -> Result<()> {
-        let disk = Arc::new(RwLock::new(DiskManager::new("test_multiple_pages.db")?));
+        let disk = Arc::new(RwLock::new(DiskManager::new("test.db")?));
         let replacer = Box::new(LruReplacer::new());
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
         let mut table_heap = TableHeap::new(bpm.clone());

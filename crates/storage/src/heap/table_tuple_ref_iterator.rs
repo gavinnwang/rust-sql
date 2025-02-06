@@ -96,7 +96,7 @@ mod tests {
         let bpm = Arc::new(RwLock::new(BufferPoolManager::new(10, disk, replacer)));
         let mut table_heap = TableHeap::new(bpm.clone());
 
-        let pages_wanted = 10;
+        let pages_wanted = 30;
         let mut num_tuples = 0;
         let mut inserted_data: Vec<Vec<u8>> = Vec::new();
         loop {
